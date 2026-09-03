@@ -1,22 +1,35 @@
 import type { CatProfile, DailyCareLog } from '@/lib/schemas'
 
+// 依「本地」年月日組出 YYYY-MM-DD，刻意不用 toISOString()（會先轉 UTC，在本地日期邊界附近可能跨日），
+// 確保與 DailyCareLog.date（依裝置本地時區派生）採同一套日期定義比較，避免時區邊界誤判
+function toLocalDateString(d: Date): string {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 // 1. 體重急遽下降警報（預設近 7 天內，窗口內最高點 vs 最新值下滑 >= 3%）
 // 日期窗口篩選在函式內處理，呼叫端可直接傳入完整歷史 logs，不需自行先過濾，避免隱性契約造成誤用
 export function checkWeightLossAlert(
   logs: DailyCareLog[],
   windowDays: number = 7
 ): { isAlert: boolean; dropRate: number } {
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - windowDays)
+  const cutoffDate = new Date()
+  cutoffDate.setDate(cutoffDate.getDate() - windowDays)
+  const cutoff = toLocalDateString(cutoffDate)
 
-  const recent = [...logs]
-    .filter((log) => typeof log.weightKg === 'number' && new Date(log.date) >= cutoff)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  const recent = logs
+    .filter(
+      (log): log is DailyCareLog & { weightKg: number } =>
+        typeof log.weightKg === 'number' && log.date >= cutoff
+    )
+    .sort((a, b) => a.date.localeCompare(b.date))
 
   if (recent.length < 2) return { isAlert: false, dropRate: 0 }
 
-  const maxWeight = Math.max(...recent.map((log) => log.weightKg!))
-  const latest = recent[recent.length - 1].weightKg!
+  const maxWeight = Math.max(...recent.map((log) => log.weightKg))
+  const latest = recent[recent.length - 1].weightKg
 
   const dropRate = ((maxWeight - latest) / maxWeight) * 100
   return {
