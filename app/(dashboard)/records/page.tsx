@@ -13,7 +13,9 @@ import Link from 'next/link'
 import { useMemo } from 'react'
 import { Line } from 'react-chartjs-2'
 
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { checkWeightLossAlert, evaluatePhosphorusStatus } from '@/lib/clinical'
 import { STORAGE_KEYS, useLocalList } from '@/lib/local-store'
 import {
@@ -124,102 +126,113 @@ export default function RecordsPage() {
         </div>
       )}
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-medium text-muted-foreground">體重 vs 輸液量</h2>
-        {dailyPoints.length > 0 ? (
-          <DualAxisLineChart
-            labels={dailyPoints.map((point) => point.date)}
-            leftAxisLabel="kg"
-            rightAxisLabel="ml"
-            datasets={[
-              {
-                label: '體重 (kg)',
-                data: dailyPoints.map((point) => point.weightKg ?? null),
-                yAxisID: 'y',
-                color: '#0f766e'
-              },
-              {
-                label: '每日輸液量 (ml)',
-                data: dailyPoints.map((point) => point.totalFluidMl),
-                yAxisID: 'y1',
-                color: '#f59e0b'
-              }
-            ]}
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            尚無照護紀錄，先到「打卡」頁記錄體重與輸液量後這裡會出現趨勢圖。
-          </p>
-        )}
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>體重 vs 輸液量</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {dailyPoints.length > 0 ? (
+            <DualAxisLineChart
+              labels={dailyPoints.map((point) => point.date)}
+              leftAxisLabel="kg"
+              rightAxisLabel="ml"
+              datasets={[
+                {
+                  label: '體重 (kg)',
+                  data: dailyPoints.map((point) => point.weightKg ?? null),
+                  yAxisID: 'y',
+                  color: '#0f766e'
+                },
+                {
+                  label: '每日輸液量 (ml)',
+                  data: dailyPoints.map((point) => point.totalFluidMl),
+                  yAxisID: 'y1',
+                  color: '#f59e0b'
+                }
+              ]}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              尚無照護紀錄，先到「打卡」頁記錄體重與輸液量後這裡會出現趨勢圖。
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>BUN / Creatinine vs 血磷</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sortedBloodTests.length > 0 ? (
+            <DualAxisLineChart
+              labels={sortedBloodTests.map((test) => test.testDate)}
+              leftAxisLabel="BUN / Creatinine (mg/dL)"
+              rightAxisLabel="血磷 (mg/dL)"
+              datasets={[
+                {
+                  label: 'BUN (mg/dL)',
+                  data: sortedBloodTests.map((test) => test.bun),
+                  yAxisID: 'y',
+                  color: '#0f766e'
+                },
+                {
+                  label: 'Creatinine (mg/dL)',
+                  data: sortedBloodTests.map((test) => test.creatinine),
+                  yAxisID: 'y',
+                  color: '#2563eb'
+                },
+                {
+                  label: '血磷 Phosphorus (mg/dL)',
+                  data: sortedBloodTests.map((test) => test.phosphorus),
+                  yAxisID: 'y1',
+                  color: '#f59e0b'
+                }
+              ]}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              尚無血檢紀錄，點右上角「新增血檢」開始記錄。
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-medium text-muted-foreground">BUN / Creatinine vs 血磷</h2>
-        {sortedBloodTests.length > 0 ? (
-          <DualAxisLineChart
-            labels={sortedBloodTests.map((test) => test.testDate)}
-            leftAxisLabel="BUN / Creatinine (mg/dL)"
-            rightAxisLabel="血磷 (mg/dL)"
-            datasets={[
-              {
-                label: 'BUN (mg/dL)',
-                data: sortedBloodTests.map((test) => test.bun),
-                yAxisID: 'y',
-                color: '#0f766e'
-              },
-              {
-                label: 'Creatinine (mg/dL)',
-                data: sortedBloodTests.map((test) => test.creatinine),
-                yAxisID: 'y',
-                color: '#2563eb'
-              },
-              {
-                label: '血磷 Phosphorus (mg/dL)',
-                data: sortedBloodTests.map((test) => test.phosphorus),
-                yAxisID: 'y1',
-                color: '#f59e0b'
-              }
-            ]}
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            尚無血檢紀錄，點右上角「新增血檢」開始記錄。
-          </p>
-        )}
-      </section>
-
-      <section className="space-y-2 border-t pt-4">
         <h2 className="text-sm font-medium text-muted-foreground">歷史血檢清單</h2>
         {bloodTestsNewestFirst.length === 0 ? (
           <p className="text-sm text-muted-foreground">尚無血檢紀錄。</p>
         ) : (
-          <ul className="space-y-2">
+          <div className="space-y-2">
             {bloodTestsNewestFirst.map((test: BloodTest) => {
               const phosphorusStatus = evaluatePhosphorusStatus(DEMO_IRIS_STAGE, test.phosphorus)
               return (
-                <li key={test.id} className="space-y-1 rounded-lg border p-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{test.testDate}</span>
-                    {test.hospitalName && (
-                      <span className="text-xs text-muted-foreground">{test.hospitalName}</span>
-                    )}
-                  </div>
-                  <p className="text-muted-foreground">
-                    BUN {test.bun}・Creatinine {test.creatinine}・血磷 {test.phosphorus}
-                    {typeof test.sdma === 'number' ? `・SDMA ${test.sdma}` : ''}
-                    {typeof test.hct === 'number' ? `・HCT ${test.hct}` : ''}
-                  </p>
-                  <p
-                    className={
-                      phosphorusStatus.isHigh ? 'text-destructive' : 'text-muted-foreground'
-                    }
-                  >
-                    {phosphorusStatus.message}
-                  </p>
-                </li>
+                <Card key={test.id} size="sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between font-medium">
+                      <span>{test.testDate}</span>
+                      {test.hospitalName && (
+                        <span className="text-xs font-normal text-muted-foreground">
+                          {test.hospitalName}
+                        </span>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p className="text-muted-foreground">
+                      BUN {test.bun}・Creatinine {test.creatinine}・血磷 {test.phosphorus}
+                      {typeof test.sdma === 'number' ? `・SDMA ${test.sdma}` : ''}
+                      {typeof test.hct === 'number' ? `・HCT ${test.hct}` : ''}
+                    </p>
+                    <Badge variant={phosphorusStatus.isHigh ? 'destructive' : 'secondary'}>
+                      {phosphorusStatus.isHigh ? '血磷偏高' : '血磷正常'}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground">{phosphorusStatus.message}</p>
+                  </CardContent>
+                </Card>
               )
             })}
-          </ul>
+          </div>
         )}
       </section>
     </div>
