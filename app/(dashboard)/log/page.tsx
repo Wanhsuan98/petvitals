@@ -1,18 +1,11 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
-import {
-  Controller,
-  useForm,
-  type FieldError,
-  type RegisterOptions,
-  type UseFormRegister
-} from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
+import { NumberField } from '@/components/number-field'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -22,6 +15,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { saveList, STORAGE_KEYS, useLocalList } from '@/lib/local-store'
 import { DailyCareLogSchema, type DailyCareLog } from '@/lib/schemas'
 import { toLocalDateString } from '@/lib/utils'
 
@@ -57,49 +51,8 @@ const DEFAULT_VALUES: DailyCareLogFormInput = {
   notes: ''
 }
 
-type NumberFieldProps = {
-  id: keyof DailyCareLogFormInput
-  label: string
-  step?: string
-  inputMode?: 'decimal' | 'numeric'
-  register: UseFormRegister<DailyCareLogFormInput>
-  registerOptions?: RegisterOptions<DailyCareLogFormInput>
-  error?: FieldError
-}
-
-function NumberField({
-  id,
-  label,
-  step = '1',
-  inputMode = 'decimal',
-  register,
-  registerOptions,
-  error
-}: NumberFieldProps) {
-  const errorId = `${id}-error`
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        type="number"
-        inputMode={inputMode}
-        step={step}
-        aria-invalid={!!error}
-        aria-describedby={error ? errorId : undefined}
-        {...register(id, registerOptions)}
-      />
-      {error && (
-        <p id={errorId} className="text-xs text-destructive">
-          {error.message}
-        </p>
-      )}
-    </div>
-  )
-}
-
 export default function LogPage() {
-  const [todayLogs, setTodayLogs] = useState<DailyCareLog[]>([])
+  const logs = useLocalList(STORAGE_KEYS.dailyCareLogs, DailyCareLogSchema)
 
   const {
     control,
@@ -122,10 +75,13 @@ export default function LogPage() {
       date: toLocalDateString(now)
     }
 
-    // TODO(Week 3): 改為呼叫 Supabase 寫入 daily_care_logs，目前先保留在畫面狀態供驗證表單流程
-    setTodayLogs((prev) => [log, ...prev])
+    // TODO(Week 3): 改為呼叫 Supabase 寫入 daily_care_logs，目前先存在 localStorage 供 /records 圖表使用
+    saveList(STORAGE_KEYS.dailyCareLogs, [log, ...logs])
     reset(DEFAULT_VALUES)
   }
+
+  const todayDate = toLocalDateString(new Date())
+  const todayLogs = logs.filter((log) => log.date === todayDate)
 
   return (
     <div className="space-y-4">
