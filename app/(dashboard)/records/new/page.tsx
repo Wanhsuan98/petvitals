@@ -11,12 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { loadList, saveList, STORAGE_KEYS } from '@/lib/local-store'
+import { DEMO_PET_ID } from '@/lib/demo-data'
+import { useBloodTests } from '@/lib/hooks'
+import { saveList, STORAGE_KEYS } from '@/lib/local-store'
 import { BloodTestSchema, type BloodTest } from '@/lib/schemas'
 import { toLocalDateString } from '@/lib/utils'
-
-// TODO(Week 3): 改由已登入使用者綁定的貓咪資料帶入，待 Supabase Auth 串接後由 context 提供
-const DEMO_PET_ID = '00000000-0000-0000-0000-000000000000'
 
 const bloodTestFormSchema = BloodTestSchema.omit({
   id: true,
@@ -42,6 +41,7 @@ const DEFAULT_VALUES: BloodTestFormInput = {
 
 export default function NewBloodTestPage() {
   const router = useRouter()
+  const bloodTests = useBloodTests()
 
   const {
     register,
@@ -61,8 +61,7 @@ export default function NewBloodTestPage() {
     }
 
     // TODO(Week 3): 改為呼叫 Supabase 寫入 blood_tests，目前先存在 localStorage 供 /records 圖表使用
-    const existing = loadList(STORAGE_KEYS.bloodTests, BloodTestSchema)
-    saveList(STORAGE_KEYS.bloodTests, [bloodTest, ...existing])
+    saveList(STORAGE_KEYS.bloodTests, [bloodTest, ...bloodTests])
 
     router.push('/records')
   }

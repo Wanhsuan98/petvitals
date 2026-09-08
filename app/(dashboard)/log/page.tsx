@@ -16,12 +16,11 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { saveList, STORAGE_KEYS, useLocalList } from '@/lib/local-store'
+import { DEMO_PET_ID } from '@/lib/demo-data'
+import { useDailyCareLogs } from '@/lib/hooks'
+import { saveList, STORAGE_KEYS } from '@/lib/local-store'
 import { DailyCareLogSchema, type DailyCareLog } from '@/lib/schemas'
 import { toLocalDateString } from '@/lib/utils'
-
-// TODO(Week 3): 改由已登入使用者綁定的貓咪資料帶入，待 Supabase Auth 串接後由 context 提供
-const DEMO_PET_ID = '00000000-0000-0000-0000-000000000000'
 
 const APPETITE_OPTIONS = [
   { value: 'GREAT', label: '食慾很好' },
@@ -53,7 +52,7 @@ const DEFAULT_VALUES: DailyCareLogFormInput = {
 }
 
 export default function LogPage() {
-  const logs = useLocalList(STORAGE_KEYS.dailyCareLogs, DailyCareLogSchema)
+  const logs = useDailyCareLogs()
 
   const {
     control,

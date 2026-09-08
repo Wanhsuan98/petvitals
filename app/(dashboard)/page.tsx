@@ -15,27 +15,21 @@ import { Line } from 'react-chartjs-2'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress, ProgressLabel, ProgressValue } from '@/components/ui/progress'
-import { calculateDailyProgress, checkWeightLossAlert } from '@/lib/clinical'
-import { STORAGE_KEYS, useLocalList } from '@/lib/local-store'
-import { DailyCareLogSchema, type CatProfile } from '@/lib/schemas'
+import {
+  calculateDailyProgress,
+  checkWeightLossAlert,
+  groupDailyCareLogsByDate
+} from '@/lib/clinical'
+import { DEMO_CAT_PROFILE } from '@/lib/demo-data'
+import { useDailyCareLogs } from '@/lib/hooks'
 import { toLocalDateString } from '@/lib/utils'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
 
-// TODO(Week 3): 改由已登入使用者實際設定的 CatProfile 帶入，待 Supabase 串接後由 context 提供
-const DEMO_CAT: Pick<
-  CatProfile,
-  'subQFluidPrescribedMl' | 'subQFluidFrequencyPerDay' | 'dailyFluidTargetMl'
-> = {
-  subQFluidPrescribedMl: 100,
-  subQFluidFrequencyPerDay: 1,
-  dailyFluidTargetMl: 200
-}
-
 const WEIGHT_TREND_WINDOW_DAYS = 7
 
 export default function DashboardHomePage() {
-  const dailyCareLogs = useLocalList(STORAGE_KEYS.dailyCareLogs, DailyCareLogSchema)
+  const dailyCareLogs = useDailyCareLogs()
 
   const todayDate = toLocalDateString(new Date())
   const todayLogs = useMemo(
@@ -43,7 +37,7 @@ export default function DashboardHomePage() {
     [dailyCareLogs, todayDate]
   )
 
-  const progress = useMemo(() => calculateDailyProgress(todayLogs, DEMO_CAT), [todayLogs])
+  const progress = useMemo(() => calculateDailyProgress(todayLogs, DEMO_CAT_PROFILE), [todayLogs])
   const weightAlert = useMemo(() => checkWeightLossAlert(dailyCareLogs), [dailyCareLogs])
 
   // 近 7 天每天最後一筆有效體重，用來畫趨勢圖
@@ -52,13 +46,9 @@ export default function DashboardHomePage() {
     cutoffDate.setDate(cutoffDate.getDate() - WEIGHT_TREND_WINDOW_DAYS)
     const cutoff = toLocalDateString(cutoffDate)
 
-    const byDate = new Map<string, number>()
-    for (const log of [...dailyCareLogs].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt))) {
-      if (log.date < cutoff || typeof log.weightKg !== 'number') continue
-      byDate.set(log.date, log.weightKg)
-    }
-
-    return [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b))
+    return groupDailyCareLogsByDate(dailyCareLogs)
+      .filter((point) => point.date >= cutoff && typeof point.weightKg === 'number')
+      .map((point) => [point.date, point.weightKg as number] as const)
   }, [dailyCareLogs])
 
   return (

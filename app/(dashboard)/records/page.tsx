@@ -16,22 +16,16 @@ import { Line } from 'react-chartjs-2'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { checkWeightLossAlert, evaluatePhosphorusStatus } from '@/lib/clinical'
-import { STORAGE_KEYS, useLocalList } from '@/lib/local-store'
 import {
-  BloodTestSchema,
-  DailyCareLogSchema,
-  type BloodTest,
-  type CatProfile,
-  type DailyCareLog
-} from '@/lib/schemas'
+  checkWeightLossAlert,
+  evaluatePhosphorusStatus,
+  groupDailyCareLogsByDate
+} from '@/lib/clinical'
+import { DEMO_CAT_PROFILE, DEMO_PET_ID } from '@/lib/demo-data'
+import { useBloodTests, useDailyCareLogs } from '@/lib/hooks'
+import { type BloodTest } from '@/lib/schemas'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
-
-// TODO(Week 3): 改由已登入使用者綁定的貓咪 CatProfile 帶入，待 Supabase 串接後由 context 提供
-const DEMO_IRIS_STAGE: CatProfile['irisStage'] = 'STAGE_2'
-
-type DailyPoint = { date: string; weightKg: number | undefined; totalFluidMl: number }
 
 type DualAxisDataset = {
   label: string
@@ -84,23 +78,9 @@ function DualAxisLineChart({
   )
 }
 
-// 同一天可能有多筆打卡紀錄：輸液量依當日加總，體重採當天最後一筆
-function groupDailyCareLogsByDate(logs: DailyCareLog[]): DailyPoint[] {
-  const byDate = new Map<string, DailyPoint>()
-
-  for (const log of [...logs].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt))) {
-    const point = byDate.get(log.date) ?? { date: log.date, weightKg: undefined, totalFluidMl: 0 }
-    point.totalFluidMl += log.subQFluidMl
-    if (typeof log.weightKg === 'number') point.weightKg = log.weightKg
-    byDate.set(log.date, point)
-  }
-
-  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
-}
-
 export default function RecordsPage() {
-  const dailyCareLogs = useLocalList(STORAGE_KEYS.dailyCareLogs, DailyCareLogSchema)
-  const bloodTests = useLocalList(STORAGE_KEYS.bloodTests, BloodTestSchema)
+  const dailyCareLogs = useDailyCareLogs()
+  const bloodTests = useBloodTests()
 
   const weightAlert = useMemo(() => checkWeightLossAlert(dailyCareLogs), [dailyCareLogs])
   const dailyPoints = useMemo(() => groupDailyCareLogsByDate(dailyCareLogs), [dailyCareLogs])
@@ -112,9 +92,21 @@ export default function RecordsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">血檢紀錄</h1>
-        <Button size="sm" nativeButton={false} render={<Link href="/records/new">新增血檢</Link>} />
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href={`/report/${DEMO_PET_ID}`}>匯出回診摘要</Link>}
+          />
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/records/new">新增血檢</Link>}
+          />
+        </div>
       </div>
 
       {weightAlert.isAlert && (
@@ -205,7 +197,10 @@ export default function RecordsPage() {
         ) : (
           <div className="space-y-2">
             {bloodTestsNewestFirst.map((test: BloodTest) => {
-              const phosphorusStatus = evaluatePhosphorusStatus(DEMO_IRIS_STAGE, test.phosphorus)
+              const phosphorusStatus = evaluatePhosphorusStatus(
+                DEMO_CAT_PROFILE.irisStage,
+                test.phosphorus
+              )
               return (
                 <Card key={test.id} size="sm">
                   <CardHeader>
