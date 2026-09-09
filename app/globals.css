@@ -127,3 +127,11 @@
     @apply font-sans;
   }
 }
+
+/* 回診摘要報告（/report/[petId]）專用：A4 橫式單頁列印 */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+}

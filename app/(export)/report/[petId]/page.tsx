@@ -1,12 +1,27 @@
-// 獸醫回診專用 A4 摘要報告頁 (CSS Print 專用佈局)
+import { redirect } from 'next/navigation'
+
+import { listBloodTests } from '@/lib/data/blood-tests'
+import { listDailyCareLogs } from '@/lib/data/daily-care-logs'
+import { requireCatProfile } from '@/lib/require-cat-profile'
+
+import { ReportView } from './report-view'
+
+// 獸醫回診專用 A4 橫式列印佈局
 export default async function ReportPage({ params }: { params: Promise<{ petId: string }> }) {
   const { petId } = await params
+  const { supabase, catProfile } = await requireCatProfile()
+
+  // 目前一位使用者僅對應一隻貓，網址帶的 petId 只會用來對齊正確的網址，不會拿去查詢別人的資料
+  if (petId !== catProfile.id) {
+    redirect(`/report/${catProfile.id}`)
+  }
+
+  const [dailyCareLogs, bloodTests] = await Promise.all([
+    listDailyCareLogs(supabase, catProfile.id),
+    listBloodTests(supabase, catProfile.id)
+  ])
+
   return (
-    <div className="print:p-0">
-      <h1 className="text-xl font-semibold">回診摘要報告（{petId}）</h1>
-      <p className="text-sm text-muted-foreground">
-        A4 橫式列印佈局（待實作 CSS Print + PDF 匯出）
-      </p>
-    </div>
+    <ReportView catProfile={catProfile} dailyCareLogs={dailyCareLogs} bloodTests={bloodTests} />
   )
 }

@@ -93,3 +93,30 @@ export function calculateDailyProgress(
     waterProgressPercent: Math.min(100, Math.round((totalWaterMl / cat.dailyFluidTargetMl) * 100))
   }
 }
+
+export type DailyCareSummaryPoint = {
+  date: string
+  weightKg: number | undefined
+  totalFluidMl: number
+  totalWaterMl: number
+}
+
+// 5. 依日期彙總照護日誌：同一天可能有多筆打卡紀錄，輸液/飲水量依當日加總，體重採當天最後一筆
+export function groupDailyCareLogsByDate(logs: DailyCareLog[]): DailyCareSummaryPoint[] {
+  const byDate = new Map<string, DailyCareSummaryPoint>()
+
+  for (const log of [...logs].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt))) {
+    const point = byDate.get(log.date) ?? {
+      date: log.date,
+      weightKg: undefined,
+      totalFluidMl: 0,
+      totalWaterMl: 0
+    }
+    point.totalFluidMl += log.subQFluidMl
+    point.totalWaterMl += log.waterIntakeMl
+    if (typeof log.weightKg === 'number') point.weightKg = log.weightKg
+    byDate.set(log.date, point)
+  }
+
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
+}
