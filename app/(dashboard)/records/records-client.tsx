@@ -16,12 +16,14 @@ import { Line } from 'react-chartjs-2'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { checkWeightLossAlert, evaluatePhosphorusStatus } from '@/lib/clinical'
+import {
+  checkWeightLossAlert,
+  evaluatePhosphorusStatus,
+  groupDailyCareLogsByDate
+} from '@/lib/clinical'
 import type { BloodTest, CatProfile, DailyCareLog } from '@/lib/schemas'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
-
-type DailyPoint = { date: string; weightKg: number | undefined; totalFluidMl: number }
 
 type DualAxisDataset = {
   label: string
@@ -72,20 +74,6 @@ function DualAxisLineChart({
       }}
     />
   )
-}
-
-// 同一天可能有多筆打卡紀錄：輸液量依當日加總，體重採當天最後一筆
-function groupDailyCareLogsByDate(logs: DailyCareLog[]): DailyPoint[] {
-  const byDate = new Map<string, DailyPoint>()
-
-  for (const log of [...logs].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt))) {
-    const point = byDate.get(log.date) ?? { date: log.date, weightKg: undefined, totalFluidMl: 0 }
-    point.totalFluidMl += log.subQFluidMl
-    if (typeof log.weightKg === 'number') point.weightKg = log.weightKg
-    byDate.set(log.date, point)
-  }
-
-  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
 }
 
 export function RecordsClient({
