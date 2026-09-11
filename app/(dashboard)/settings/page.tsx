@@ -1,10 +1,12 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getCatProfile } from '@/lib/data/cat-profile'
+import { getLatestSubscription } from '@/lib/data/subscriptions'
 import { createClient } from '@/lib/supabase/server'
 
 import { signOut } from './actions'
 import { CatProfileForm } from './cat-profile-form'
+import { SubscriptionSection } from './subscription-section'
 
 // 貓咪基本資料、目標水量與醫囑設定
 export default async function SettingsPage() {
@@ -14,6 +16,7 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser()
 
   const catProfile = user ? await getCatProfile(supabase, user.id) : null
+  const subscription = user ? await getLatestSubscription(supabase, user.id) : null
 
   return (
     <div className="space-y-4">
@@ -28,6 +31,15 @@ export default async function SettingsPage() {
             </p>
           )}
           <CatProfileForm catProfile={catProfile} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>訂閱方案</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SubscriptionSection subscription={subscription} />
         </CardContent>
       </Card>
 
