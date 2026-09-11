@@ -13,7 +13,9 @@ const eslintConfig = defineConfig([
     '.next/**',
     'out/**',
     'build/**',
-    'next-env.d.ts'
+    'next-env.d.ts',
+    // Vendored third-party reference material, not project code.
+    '.claude/skills/**'
   ])
 ])
 

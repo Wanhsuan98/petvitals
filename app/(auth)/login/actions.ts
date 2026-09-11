@@ -1,9 +1,9 @@
 'use server'
 
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { AuthError } from '@supabase/supabase-js'
 
+import { getSiteOrigin } from '@/lib/site-url'
 import { createClient } from '@/lib/supabase/server'
 
 export type MagicLinkState = {
@@ -23,22 +23,6 @@ function toFriendlyMessage(error: AuthError): string {
   return ERROR_MESSAGES[error.code ?? ''] ?? '登入連結寄送失敗，請稍後再試'
 }
 
-async function getOrigin(): Promise<string> {
-  // 正式環境設定 NEXT_PUBLIC_SITE_URL 後，就不再信任任何 request header，
-  // 避免有心人偽造 Host/Origin header 讓 Auth email 帶出非預期的導轉網址。
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL
-  }
-
-  const headersList = await headers()
-  const origin = headersList.get('origin')
-  if (origin) return origin
-
-  const host = headersList.get('host')
-  const protocol = headersList.get('x-forwarded-proto') ?? 'https'
-  return `${protocol}://${host}`
-}
-
 export async function signInWithMagicLink(
   _prevState: MagicLinkState,
   formData: FormData
@@ -49,7 +33,7 @@ export async function signInWithMagicLink(
   }
 
   const supabase = await createClient()
-  const origin = await getOrigin()
+  const origin = await getSiteOrigin()
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -65,7 +49,7 @@ export async function signInWithMagicLink(
 
 export async function signInWithGoogle() {
   const supabase = await createClient()
-  const origin = await getOrigin()
+  const origin = await getSiteOrigin()
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',

@@ -3,10 +3,15 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { getSupabaseEnv } from './env'
 
-const PUBLIC_PATHS = ['/login', '/service']
+const PUBLIC_PATHS = ['/login', '/service', '/api/ecpay/order-result']
 
 function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/auth/')
+  return (
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname.startsWith('/auth/') ||
+    // ECPay 的 server-to-server 付款通知，沒有使用者 session，安全性由 CheckMacValue 驗證把關
+    pathname.startsWith('/api/ecpay/callback/')
+  )
 }
 
 // 在每個 request 進來時刷新 Supabase session（token 過期前自動換發新的），
