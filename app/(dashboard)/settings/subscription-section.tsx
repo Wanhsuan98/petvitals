@@ -16,7 +16,7 @@ const INITIAL_CANCEL_STATE: CancelSubscriptionState = { status: 'idle' }
 const INITIAL_REFRESH_STATE: RefreshSubscriptionState = { status: 'idle' }
 
 export function SubscriptionSection({ subscription }: { subscription: Subscription | null }) {
-  const [state, formAction, isPending] = useActionState(
+  const [cancelState, formAction, isPending] = useActionState(
     cancelSubscriptionAction,
     INITIAL_CANCEL_STATE
   )
@@ -49,12 +49,14 @@ export function SubscriptionSection({ subscription }: { subscription: Subscripti
           )}
         </p>
 
-        {state.status === 'error' && (
+        {cancelState.status === 'error' && (
           <p role="alert" className="text-sm text-destructive">
-            {state.message}
+            {cancelState.message}
           </p>
         )}
-        {state.status === 'success' && <p className="text-sm text-primary">{state.message}</p>}
+        {cancelState.status === 'success' && (
+          <p className="text-sm text-primary">{cancelState.message}</p>
+        )}
 
         <Button variant="outline" disabled={isPending} onClick={onCancel}>
           {isPending ? '取消中…' : '取消訂閱'}
@@ -71,9 +73,9 @@ export function SubscriptionSection({ subscription }: { subscription: Subscripti
           若你當初中途離開了付款頁面沒有完成付款，可以放棄這筆再重新訂閱一次。
         </p>
 
-        {state.status === 'error' && (
+        {cancelState.status === 'error' && (
           <p role="alert" className="text-sm text-destructive">
-            {state.message}
+            {cancelState.message}
           </p>
         )}
         {refreshState.status === 'error' && (

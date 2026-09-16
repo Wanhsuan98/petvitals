@@ -148,29 +148,38 @@ export async function refreshSubscriptionStatusAction(
     return { status: 'error', message: '目前沒有需要查詢的訂閱' }
   }
 
+  let result
   try {
-    const result = await queryEcpayPeriodTrade(subscription.merchantTradeNo)
-    const serviceRoleSupabase = createServiceRoleClient()
-
-    if (result.rtnCode === 1 && result.totalSuccessTimes > 0 && result.latestGwsr) {
-      await markSubscriptionPaymentResult(serviceRoleSupabase, subscription.merchantTradeNo, {
-        succeeded: true,
-        authRef: result.latestGwsr
-      })
-      revalidatePath('/settings')
-      return { status: 'success', message: '已依綠界最新資料更新為訂閱中' }
-    }
-
-    if (result.execStatus === '0') {
-      await cancelSubscription(serviceRoleSupabase, subscription.merchantTradeNo)
-      revalidatePath('/settings')
-      return { status: 'success', message: '綠界那邊顯示這筆訂閱已終止' }
-    }
+    result = await queryEcpayPeriodTrade(subscription.merchantTradeNo)
   } catch (error) {
     return {
       status: 'error',
       message: error instanceof Error ? error.message : '查詢失敗，請稍後再試'
     }
+  }
+
+  // 查詢 API 呼叫本身失敗（例如 TimeStamp 超過綠界要求的 3 分鐘驗證區間），
+  // 跟「還沒有成功授權」是兩回事，不要混在一起當成「狀態維持不變」處理
+  if (result.rtnCode !== 1) {
+    return { status: 'error', message: '查詢綠界狀態失敗，請稍後再試' }
+  }
+
+  const serviceRoleSupabase = createServiceRoleClient()
+
+  // 用累計成功次數是否變多來判斷有沒有新的成功扣款，不依賴綠界回傳的授權明細陣列順序
+  if (result.totalSuccessTimes > subscription.totalSuccessTimes) {
+    await markSubscriptionPaymentResult(serviceRoleSupabase, subscription.merchantTradeNo, {
+      succeeded: true,
+      authRef: `${subscription.merchantTradeNo}-${result.totalSuccessTimes}`
+    })
+    revalidatePath('/settings')
+    return { status: 'success', message: '已依綠界最新資料更新為訂閱中' }
+  }
+
+  if (result.execStatus === '0') {
+    await cancelSubscription(serviceRoleSupabase, subscription.merchantTradeNo)
+    revalidatePath('/settings')
+    return { status: 'success', message: '綠界那邊顯示這筆訂閱已終止' }
   }
 
   return { status: 'success', message: '綠界目前還沒有成功授權紀錄，狀態維持不變' }
