@@ -73,6 +73,27 @@ export const BloodTestSchema = z.object({
   createdAt: z.string().datetime().optional()
 })
 
+// ==========================================
+// 4. 照護者協作 Schema（永久免費功能，不綁定訂閱，見 docs/05-decisions/ADR-002-subscription-tier-model.md 的 Update）
+// 只記錄「被邀請的協作者」，不記錄 owner 自己——owner 的權限來自 CatProfile.ownerId，
+// 詳見 docs/02-data-contract/pet-caregiver.md
+// ==========================================
+export const PetCaregiverSchema = z.object({
+  id: z.string().uuid().optional(),
+  petId: z.string().uuid(),
+  userId: z.string().uuid(), // 綁定 Supabase auth.users.id，被邀請的協作者帳號
+  status: z.enum(['PENDING', 'ACCEPTED']).default('PENDING'),
+  invitedEmail: z.string().email(),
+  invitedAt: z.string().datetime().optional(),
+  acceptedAt: z.string().datetime().optional()
+})
+
+// 每隻貓最多可協作的「總人數」，owner 本人已經算在這個數字裡面（不是 owner 另外 +3）。
+// 例如 = 3 代表最多「owner + 2 位協作者」共 3 人，不是「owner + 3 位協作者」共 4 人。
+// 累積口碑階段先固定為常數，之後如需依方案分級再改為讀取訂閱方案設定，不要一開始就過度設計
+export const MAX_CAREGIVERS_PER_PET = 3
+
 export type CatProfile = z.infer<typeof CatProfileSchema>
 export type DailyCareLog = z.infer<typeof DailyCareLogSchema>
 export type BloodTest = z.infer<typeof BloodTestSchema>
+export type PetCaregiver = z.infer<typeof PetCaregiverSchema>

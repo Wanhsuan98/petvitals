@@ -5,10 +5,21 @@
 ### Added
 
 - Loading skeletons for the four dashboard tab routes (`loading.tsx`), reducing perceived lag when switching tabs.
+- Multi-caregiver collaboration: cat owners can invite up to 3 people (including themselves) by email to jointly log daily care and blood tests for a cat. Free for everyone, not gated behind the Pro subscription.
 
-### Planned (design complete, not yet implemented)
+### Changed
 
-- Multi-caregiver collaboration (up to 3 people per cat, including the owner), gated behind the Pro subscription.
+- Multi-caregiver collaboration was originally planned as a Pro-subscription-gated feature; changed to permanently free during development. See [ADR-002](docs/05-decisions/ADR-002-subscription-tier-model.md).
+
+### Fixed (code review)
+
+- Caregivers could previously delete a cat's entire care history via the API (RLS granted `delete`, not just read/write); narrowed to `select`/`insert` only.
+- Concurrent invite requests could push a cat's caregiver count past the 3-person cap; a DB trigger with an advisory lock now enforces it as a backstop.
+- Caregiver email lookup was case-sensitive, silently rejecting valid invites when casing differed from the stored account email.
+- Accepting an already-removed or already-processed invitation reported success without actually granting access.
+
+### Planned (not yet implemented)
+
 - Proactive reminder scheduling via Web Push (fluid/medication/daily-log reminders), gated behind the Pro subscription.
 
 See [docs/06-releases/v1.2.0.md](docs/06-releases/v1.2.0.md) for the full change proposal.

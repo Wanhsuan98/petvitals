@@ -1,7 +1,7 @@
 # 多照護者協作 (Caregivers)
 
-Status: Planned
-Introduced: v1.2.0 (Change Proposal，尚未動工)
+Status: Implemented
+Introduced: v1.2.0
 
 ## Purpose
 
@@ -11,8 +11,8 @@ Introduced: v1.2.0 (Change Proposal，尚未動工)
 
 - 飼主（owner）可透過 email 邀請其他已註冊的 PetVitals 帳號成為同一隻貓的照護者（caregiver），共同查看與新增每日照護日誌、血檢紀錄。
 - 累積口碑階段先訂一個固定上限：**每隻貓最多 3 位協作者（含 owner 本人）**，做成常數（`MAX_CAREGIVERS_PER_PET`）而非分級方案，之後依實際使用回饋再評估要不要拆分更高階方案。決策脈絡見 [ADR-003](../05-decisions/ADR-003-caregiver-cap.md)。
-- 僅 owner 可以邀請/移除協作者、管理訂閱與刪除貓咪資料；caregiver 僅能讀寫日常照護資料，不能異動訂閱或邀請他人。
-- 此功能綁定訂閱狀態：訂閱中才能新增第 2 位起的協作者；訂閱取消或失效後，既有資料保留，但第 2 位起的協作者立即失去存取權限，僅 owner 保留完整存取（軟性降級，不刪除資料）。
+- 僅 owner 可以邀請/移除協作者、管理訂閱與刪除貓咪資料；caregiver 僅能查看與新增每日照護日誌、血檢紀錄，**不能刪除**（code review 補上的限制，避免任何協作者都能直接刪光整隻貓的照護紀錄），也不能異動訂閱或邀請他人。
+- 這個功能永久免費，不綁定訂閱狀態（原本規劃成訂閱才能用，開發期間改為永久免費，見 [ADR-002](../05-decisions/ADR-002-subscription-tier-model.md) 的 Update）。
 
 ## Invitation Flow
 
