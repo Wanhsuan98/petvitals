@@ -35,18 +35,54 @@ function toCatProfile(row: CatProfileRow): CatProfile {
 }
 
 // 目前一位使用者僅對應一隻貓（MVP 範圍），沒有資料時回傳 null 交由呼叫端導去設定頁建立
+// userId 可能是貓的 owner，也可能只是被邀請的協作者（自己沒有貓）——
+// 先找自己擁有的貓，找不到才找自己是 accepted caregiver 的貓（取最早接受邀請的一筆）。
+// 一個人同時擁有自己的貓又是別人協作者的情況，目前只會回傳自己的貓，跟多隻貓咪管理是
+// 同一個未來要解的問題（見 docs/00-product/roadmap.md），v1.2 先不處理。
 export async function getCatProfile(
   supabase: SupabaseClient,
-  ownerId: string
+  userId: string
 ): Promise<CatProfile | null> {
-  const { data, error } = await supabase
+  const { data: ownedRow, error: ownedError } = await supabase
     .from('cat_profiles')
     .select('*')
-    .eq('owner_id', ownerId)
+    .eq('owner_id', userId)
     .maybeSingle()
 
-  if (error) throw new Error(`讀取貓咪資料失敗：${error.message}`)
-  return data ? toCatProfile(data as CatProfileRow) : null
+  if (ownedError) throw new Error(`讀取貓咪資料失敗：${ownedError.message}`)
+  if (ownedRow) return toCatProfile(ownedRow as CatProfileRow)
+
+  const { data: caregiverLink, error: caregiverLinkError } = await supabase
+    .from('pet_caregivers')
+    .select('pet_id')
+    .eq('user_id', userId)
+    .eq('status', 'ACCEPTED')
+    .order('accepted_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (caregiverLinkError) throw new Error(`讀取協作貓咪資料失敗：${caregiverLinkError.message}`)
+  if (!caregiverLink) return null
+
+  const { data: caregiverCat, error: caregiverCatError } = await supabase
+    .from('cat_profiles')
+    .select('*')
+    .eq('id', caregiverLink.pet_id)
+    .maybeSingle()
+
+  if (caregiverCatError) throw new Error(`讀取協作貓咪資料失敗：${caregiverCatError.message}`)
+  return caregiverCat ? toCatProfile(caregiverCat as CatProfileRow) : null
+}
+
+// 邀請/移除協作者等 owner-only 操作共用的檢查：回傳這個使用者「自己擁有」的貓，
+// 如果他其實只是別人的協作者（或根本沒有可存取的貓），一律回傳 null，
+// 不需要呼叫端每次都自己重複寫 `catProfile.ownerId !== user.id` 這段判斷
+export async function getOwnedCatProfile(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<CatProfile | null> {
+  const catProfile = await getCatProfile(supabase, userId)
+  return catProfile && catProfile.ownerId === userId ? catProfile : null
 }
 
 // 沒有資料就新增，已有資料就更新——靠 DB 的 owner_id 唯一約束 + upsert 做原子操作，
