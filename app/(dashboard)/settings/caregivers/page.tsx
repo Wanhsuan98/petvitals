@@ -23,6 +23,9 @@ export default async function CaregiversPage() {
   }
 
   const caregivers = await listCaregiversForPet(supabase, catProfile.id)
+  // pet_caregivers 的每一筆都是 PENDING 或 ACCEPTED（沒有其他狀態），
+  // 所以 caregivers.length 就是目前佔用的協作者名額數，+1 代表 owner 本人
+  const isAtCap = caregivers.length + 1 >= MAX_CAREGIVERS_PER_PET
 
   return (
     <div className="space-y-4">
@@ -35,7 +38,13 @@ export default async function CaregiversPage() {
             每隻貓最多 {MAX_CAREGIVERS_PER_PET} 位協作者（含飼主本人）。對方需要先註冊/登入
             PetVitals，才能用同一個 email 被邀請。
           </p>
-          <CaregiverInviteForm />
+          {isAtCap ? (
+            <p className="text-sm text-muted-foreground">
+              已達 {MAX_CAREGIVERS_PER_PET} 人上限，請先移除一位協作者才能邀請新的人。
+            </p>
+          ) : (
+            <CaregiverInviteForm />
+          )}
         </CardContent>
       </Card>
 
