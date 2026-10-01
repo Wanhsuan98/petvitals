@@ -11,7 +11,7 @@ Last Updated: v1.2.0
 4. **多維度視覺化儀表板**：詳見 [../01-requirements/dashboard.md](../01-requirements/dashboard.md)。
 5. **回診專用 A4 PDF 輸出**：詳見 [../01-requirements/report.md](../01-requirements/report.md)。
 6. **多照護者協作（永久免費，v1.2）**：詳見 [../01-requirements/caregivers.md](../01-requirements/caregivers.md)。
-7. **主動提醒排程（訂閱 Pro 進階功能，v1.2）**：詳見 [../01-requirements/notification.md](../01-requirements/notification.md)。
+7. **主動提醒排程（永久免費，v1.2）**：詳見 [../01-requirements/notification.md](../01-requirements/notification.md)。
 
 ## ❌ 排除範疇 (Out of Scope)
 
@@ -29,7 +29,7 @@ Last Updated: v1.2.0
 | 每日照護日誌、血檢紀錄、圖表 | ✅ | ✅ |
 | 回診 A4 PDF 匯出 | ✅ | ✅ |
 | 多照護者協作（每隻貓最多 3 人，含 owner） | ✅ | ✅ |
-| 主動提醒排程（Web Push） | ❌ | ✅ |
+| 主動提醒排程（Web Push） | ✅ | ✅ |
 | 多隻貓咪管理 | ❌ | 🔜 架構已預留，尚未開放 |
 
-> 設計原則：核心照護記錄與匯出功能永久免費，不因訂閱與否而閹割。多照護者協作原本規劃成訂閱 Pro 才能解鎖，後來決定改成永久免費——決策脈絡與原因見 [ADR-002](../05-decisions/ADR-002-subscription-tier-model.md)。目前訂閱唯一解鎖的差異化功能是主動提醒排程（尚未實作）。
+> 設計原則：核心照護記錄與匯出功能永久免費，不因訂閱與否而閹割。多照護者協作、主動提醒排程原本都規劃成訂閱 Pro 才能解鎖，後來依序決定改成永久免費——決策脈絡與原因見 [ADR-002](../05-decisions/ADR-002-subscription-tier-model.md)。目前訂閱**沒有解鎖任何已上線的功能**，唯一規劃中的差異化功能是尚未開放的多隻貓咪管理；ECPay 訂閱機制本身仍保留，但要不要繼續維護／是否還有存在必要，建議另外討論。

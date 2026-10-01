@@ -94,7 +94,7 @@ export const PetCaregiverSchema = z.object({
 export const MAX_CAREGIVERS_PER_PET = 3
 
 // ==========================================
-// 5. 主動提醒排程 Schema（訂閱 Pro 進階功能）
+// 5. 主動提醒排程 Schema（永久免費功能，不綁定訂閱，見 docs/05-decisions/ADR-002-subscription-tier-model.md 的 Update）
 // ==========================================
 export const ReminderScheduleSchema = z.object({
   id: z.string().uuid().optional(),
@@ -108,7 +108,7 @@ export const ReminderScheduleSchema = z.object({
 })
 
 // ==========================================
-// 6. 瀏覽器推播訂閱 Schema（Web Push，訂閱 Pro 進階功能）
+// 6. 瀏覽器推播訂閱 Schema（Web Push，永久免費功能）
 // 純粹是「這個使用者的這個裝置」的憑證，不透過 cat_profiles/pet_caregivers 判斷任何權限
 // ==========================================
 export const PushSubscriptionSchema = z.object({

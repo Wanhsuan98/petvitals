@@ -6,10 +6,12 @@
 
 - Loading skeletons for the four dashboard tab routes (`loading.tsx`), reducing perceived lag when switching tabs.
 - Multi-caregiver collaboration: cat owners can invite up to 3 people (including themselves) by email to jointly log daily care and blood tests for a cat. Free for everyone, not gated behind the Pro subscription.
+- Proactive reminder scheduling via Web Push (fluid/medication/daily-log reminders). Owners manage schedules; accepted caregivers can view them and enable push notifications on their own device. Triggered by a GitHub Actions scheduled workflow (`*/5 * * * *`) instead of Vercel Cron, since Vercel's Hobby plan only supports daily cron triggers. Free for everyone, not gated behind the Pro subscription.
 
 ### Changed
 
 - Multi-caregiver collaboration was originally planned as a Pro-subscription-gated feature; changed to permanently free during development. See [ADR-002](docs/05-decisions/ADR-002-subscription-tier-model.md).
+- Proactive reminder scheduling was also originally planned as Pro-subscription-gated; changed to permanently free after multi-caregiver collaboration was. As of this release, the ECPay subscription no longer unlocks any shipped feature — see the second Update in [ADR-002](docs/05-decisions/ADR-002-subscription-tier-model.md).
 
 ### Fixed (code review)
 
@@ -18,11 +20,10 @@
 - Caregiver email lookup was case-sensitive, silently rejecting valid invites when casing differed from the stored account email.
 - Accepting an already-removed or already-processed invitation reported success without actually granting access.
 
-- Proactive reminder scheduling via Web Push (fluid/medication/daily-log reminders), gated behind the Pro subscription. Owners manage schedules; accepted caregivers can view them and enable push notifications on their own device. Triggered by a GitHub Actions scheduled workflow (`*/5 * * * *`) instead of Vercel Cron, since Vercel's Hobby plan only supports daily cron triggers.
+### Fixed
 
-### Pending (code complete, not yet verified in production)
-
-- Run migration `20260930000000`/`20261001000000` against Supabase, set the four reminder-related env vars in Vercel, and add the `CRON_SECRET`/`CRON_ENDPOINT_URL` GitHub Actions repo secrets before this goes live.
+- `api/cron/send-reminders` was unreachable in production: the global auth middleware redirected the unauthenticated GitHub Actions request to `/login` before the route's own `CRON_SECRET` check ever ran. Exempted this path the same way the ECPay webhook callback is.
+- Signing out of PetVitals only cleared our own session, not Google's; signing in with Google again silently reused whatever Google account was already active on the device, with no way to switch accounts. Added `prompt: select_account` to force the account picker every time.
 
 See [docs/06-releases/v1.2.0.md](docs/06-releases/v1.2.0.md) for the full change proposal.
 

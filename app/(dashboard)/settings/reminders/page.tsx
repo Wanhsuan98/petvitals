@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getCatProfile } from '@/lib/data/cat-profile'
 import { listReminderSchedulesForPet } from '@/lib/data/reminder-schedules'
-import { getLatestSubscription } from '@/lib/data/subscriptions'
 import { createClient } from '@/lib/supabase/server'
 
 import { PushSubscribeToggle } from './push-subscribe-toggle'
@@ -23,10 +22,6 @@ export default async function RemindersPage() {
   if (!catProfile) redirect('/settings')
 
   const isOwner = catProfile.ownerId === user.id
-  // 協作者不需要自己訂閱——提醒排程能不能用，看的是貓的飼主有沒有訂閱
-  const subscription = isOwner ? await getLatestSubscription(supabase, user.id) : null
-  const hasActiveSubscription = isOwner ? subscription?.status === 'active' : true
-
   const schedules = await listReminderSchedulesForPet(supabase, catProfile.id)
 
   return (
@@ -45,12 +40,7 @@ export default async function RemindersPage() {
           <CardTitle>{isOwner ? '新增提醒排程' : '提醒排程'}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isOwner && !hasActiveSubscription && (
-            <p className="text-sm text-muted-foreground">
-              主動提醒排程是訂閱專屬功能，請先到設定頁訂閱後再設定提醒時間。
-            </p>
-          )}
-          {isOwner && hasActiveSubscription && <ReminderScheduleForm />}
+          {isOwner && <ReminderScheduleForm />}
           {!isOwner && (
             <p className="text-sm text-muted-foreground">
               提醒排程由飼主設定，這裡僅供查看；開啟上方推播通知後，時間到了就能在這個裝置收到提醒。
@@ -64,10 +54,7 @@ export default async function RemindersPage() {
           <CardTitle>目前的提醒</CardTitle>
         </CardHeader>
         <CardContent>
-          <ReminderScheduleList
-            schedules={schedules}
-            canManage={isOwner && hasActiveSubscription}
-          />
+          <ReminderScheduleList schedules={schedules} canManage={isOwner} />
         </CardContent>
       </Card>
     </div>
