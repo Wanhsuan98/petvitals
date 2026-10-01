@@ -1,6 +1,6 @@
-# ADR-002: 訂閱分級模型——核心功能與多照護者協作永久免費，提醒排程為付費解鎖
+# ADR-002: 訂閱分級模型——核心功能、多照護者協作與主動提醒排程皆永久免費
 
-Status: Accepted（v1.2.0 開發期間修訂，見下方 Update）
+Status: Accepted（v1.2.0 開發期間兩度修訂，見下方 Update）
 
 ## Context
 
@@ -25,6 +25,14 @@ v1.0/v1.1 的 ECPay 訂閱純粹是付費機制，沒有跟任何功能綁定（
 實測期間也確實觀察到訂閱狀態綁定會放大既有的痛點——這個專案的 ECPay webhook 不保證即時送達、訂閱狀態需要手動點「重新查詢狀態」才會更新（見 [綠界金流備援機制](../04-architecture/backend.md)），把協作功能綁在這個還不夠穩定的狀態上，會讓一個原本應該很簡單的「邀請家人一起顧貓」的動作，變成要先搞定訂閱金流卡關才能用，這跟功能本身想解決的「降低照護人力負擔」目標是矛盾的。
 
 RLS 層面的異動見 `supabase/migrations/20260918050000_remove_caregiver_subscription_gate.sql`。
+
+## Update：主動提醒排程也改為永久免費
+
+開發完成並進入實機測試階段後，再次改變決定：**主動提醒排程也不再綁定訂閱狀態**，跟多照護者協作一樣改成永久免費。
+
+目前的結果是：**ECPay 訂閱目前沒有解鎖任何已上線的功能**，唯一還規劃在訂閱 Pro 底下的是尚未開放的多隻貓咪管理（見 [../00-product/scope.md](../00-product/scope.md)）。ECPay 的金流串接本身沒有移除，仍保留在 v1.0 就上線的付費訂閱機制，但它現在對免費版使用者體驗沒有任何限制作用；是否要繼續維護這套金流、或是等多隻貓咪管理真的開發時再評估，是一個後續需要另外討論的產品決策，不在這次異動範圍內。
+
+應用層的異動：`app/(dashboard)/settings/reminders/actions.ts` 的 `createReminderScheduleAction`、`app/(dashboard)/settings/reminders/page.tsx`、`app/api/cron/send-reminders` 都拿掉了 `getLatestSubscription` 檢查。
 
 ## Related
 

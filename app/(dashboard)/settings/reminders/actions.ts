@@ -9,7 +9,6 @@ import {
   deleteReminderSchedule,
   setReminderScheduleEnabled
 } from '@/lib/data/reminder-schedules'
-import { getLatestSubscription } from '@/lib/data/subscriptions'
 import { ReminderScheduleSchema } from '@/lib/schemas'
 import { createClient } from '@/lib/supabase/server'
 
@@ -43,13 +42,6 @@ export async function createReminderScheduleAction(
 
   const catProfile = await getOwnedCatProfile(supabase, user.id)
   if (!catProfile) return { status: 'error', message: '只有飼主本人可以管理提醒排程' }
-
-  // RLS 不會擋這個寫入（owner 本來就有 reminder_schedules 的寫入權限），
-  // 主動提醒排程的訂閱門檻要在應用層額外檢查
-  const subscription = await getLatestSubscription(supabase, user.id)
-  if (subscription?.status !== 'active') {
-    return { status: 'error', message: '主動提醒排程是訂閱專屬功能，請先訂閱後再設定' }
-  }
 
   try {
     await createReminderSchedule(supabase, { ...parsed.data, petId: catProfile.id })

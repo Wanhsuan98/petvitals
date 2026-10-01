@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { listCaregiversForPet } from '@/lib/data/pet-caregivers'
 import { listDueReminders, markReminderSentToday } from '@/lib/data/reminder-schedules'
-import { getLatestSubscription } from '@/lib/data/subscriptions'
 import type { ReminderSchedule } from '@/lib/schemas'
 import { getCronSecret } from '@/lib/push/env'
 import { sendPushToUsers } from '@/lib/push/send'
@@ -48,11 +47,6 @@ export async function GET(request: NextRequest) {
 
   for (const reminder of dueReminders) {
     if (!reminder.id || reminder.lastSentOn === today) continue
-
-    // 主動提醒排程是訂閱 Pro 專屬功能：owner 取消訂閱後，既有排程不會自動刪除，
-    // 但發送當下要重新檢查訂閱狀態，避免取消訂閱後仍免費持續收到提醒
-    const ownerSubscription = await getLatestSubscription(serviceRoleSupabase, reminder.ownerId)
-    if (ownerSubscription?.status !== 'active') continue
 
     const caregivers = await listCaregiversForPet(serviceRoleSupabase, reminder.petId)
     const recipientUserIds = [

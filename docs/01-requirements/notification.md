@@ -11,7 +11,7 @@ Excel 或試算表不會主動提醒使用者「該打輸液了」，照顧者�
 
 - 可為輸液時間、用藥時間、每日打卡設定排程提醒（`/settings/reminders`），透過 Web Push API 於瀏覽器/PWA 主動推播通知。
 - 排程由飼主（owner）新增/啟用停用/刪除；accepted caregiver 可以看到排程內容，但不能修改，只能在自己的裝置上開啟/關閉推播通知。
-- 主動提醒排程是訂閱 Pro 專屬功能：只有飼主有有效訂閱時才能新增新的排程；訂閱取消後，既有排程不會自動刪除，但 cron 發送當下會重新檢查訂閱狀態，沒有有效訂閱就不會真的推播。
+- 永久免費功能，不綁定訂閱狀態（原本規劃是訂閱 Pro 專屬功能，開發期間改為免費，見 [ADR-002](../05-decisions/ADR-002-subscription-tier-model.md) 的 Update）。
 - 需使用者明確授權瀏覽器通知權限，並完成 PWA 安裝——尤其 iOS 需 16.4 以上且僅限已加入主畫面的 PWA 才支援 Web Push，這是平台限制而非本產品可控範圍，已在設定流程中明確告知使用者。
 - 排程觸發用 GitHub Actions（`on: schedule`，見 `.github/workflows/send-reminders.yml`）每 5 分鐘打一次 `api/cron/send-reminders`，不是 Vercel Cron——查證後確認 Vercel Hobby 方案的 Cron 只能一天觸發一次，不夠用，Pro 方案要付費，改用免費的 GitHub Actions。
 - 同一則提醒一天只會發送一次：`reminder_schedules.last_sent_on` 記錄最後發送日期，避免排程誤差或重複觸發造成同一則提醒一天內推播多次。
