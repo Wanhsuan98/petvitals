@@ -63,6 +63,13 @@ export default async function SettingsPage() {
               render={<Link href="/settings/caregivers">管理協作者</Link>}
             />
           )}
+          {catProfile && (
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/settings/reminders">主動提醒排程</Link>}
+            />
+          )}
         </CardContent>
       </Card>
 

@@ -4,3 +4,6 @@ build
 node_modules
 pnpm-lock.yaml
 next-env.d.ts
+
+# 外部廠商提供的 skill 套件，不是我們維護的程式碼，不應該被 pnpm format 改到
+.claude/skills/

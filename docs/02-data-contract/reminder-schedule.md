@@ -1,7 +1,7 @@
 # ReminderSchedule
 
-Status: Planned
-Introduced: v1.2.0（尚未動工）
+Status: Implemented
+Introduced: v1.2.0
 
 ## Purpose
 
@@ -9,15 +9,15 @@ Introduced: v1.2.0（尚未動工）
 
 ## Fields
 
-| Field | Type | Required | Description |
-| :--- | :--- | :--- | :--- |
-| id | UUID | No | Record ID |
-| petId | UUID | Yes | Cat profile ID |
-| type | enum | Yes | `FLUID` \| `MEDICATION` \| `DAILY_LOG` |
-| label | string | Yes | 使用者自訂顯示名稱，最多 20 字，例如「早上輸液」「降磷藥」 |
-| timeOfDay | string (HH:mm) | Yes | 本地時間；MVP 僅支援 Asia/Taipei 單一時區 |
-| enabled | boolean | Yes | 預設 `true` |
-| createdAt | datetime | No | 建立時間 |
+| Field     | Type           | Required | Description                                                |
+| :-------- | :------------- | :------- | :--------------------------------------------------------- |
+| id        | UUID           | No       | Record ID                                                  |
+| petId     | UUID           | Yes      | Cat profile ID                                             |
+| type      | enum           | Yes      | `FLUID` \| `MEDICATION` \| `DAILY_LOG`                     |
+| label     | string         | Yes      | 使用者自訂顯示名稱，最多 20 字，例如「早上輸液」「降磷藥」 |
+| timeOfDay | string (HH:mm) | Yes      | 本地時間；MVP 僅支援 Asia/Taipei 單一時區                  |
+| enabled   | boolean        | Yes      | 預設 `true`                                                |
+| createdAt | datetime       | No       | 建立時間                                                   |
 
 ## Validation
 
@@ -28,6 +28,9 @@ Introduced: v1.2.0（尚未動工）
 
 - MVP 僅支援單一時區（Asia/Taipei），不做使用者裝置時區偵測。
 - 提醒的實際發送依賴 Web Push，裝置/瀏覽器相容性限制見 [notification.md](../01-requirements/notification.md)。
+- 權限模型跟 `cat_profiles` 一致：owner 可管理（新增/啟用停用/刪除），accepted caregiver 唯讀（能看到這隻貓的提醒排程，但不能修改）。
+- 新增排程要求 owner 有有效訂閱（訂閱 Pro 專屬功能）；RLS 本身不擋這個條件，由應用層（`createReminderScheduleAction`）與 cron 發送當下各自檢查一次。
+- DB 多一個內部用的 `last_sent_on`（date，可為 null）欄位，不在上面的 Fields 清單裡、也沒有對應到 Zod schema——純粹是 cron job 用來記錄「今天是否已經發送過」，避免排程誤差造成同一則提醒一天內重複推播，不是給使用者看的資料。
 
 ## Related Requirements
 
@@ -35,4 +38,4 @@ Introduced: v1.2.0（尚未動工）
 
 ## Related Architecture
 
-- [../04-architecture/backend.md](../04-architecture/backend.md)（Vercel Cron 掃描與發送機制）
+- [../04-architecture/backend.md](../04-architecture/backend.md)（GitHub Actions 排程觸發、`CRON_SECRET` 驗證）

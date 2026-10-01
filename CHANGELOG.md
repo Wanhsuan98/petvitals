@@ -18,9 +18,11 @@
 - Caregiver email lookup was case-sensitive, silently rejecting valid invites when casing differed from the stored account email.
 - Accepting an already-removed or already-processed invitation reported success without actually granting access.
 
-### Planned (not yet implemented)
+- Proactive reminder scheduling via Web Push (fluid/medication/daily-log reminders), gated behind the Pro subscription. Owners manage schedules; accepted caregivers can view them and enable push notifications on their own device. Triggered by a GitHub Actions scheduled workflow (`*/5 * * * *`) instead of Vercel Cron, since Vercel's Hobby plan only supports daily cron triggers.
 
-- Proactive reminder scheduling via Web Push (fluid/medication/daily-log reminders), gated behind the Pro subscription.
+### Pending (code complete, not yet verified in production)
+
+- Run migration `20260930000000`/`20261001000000` against Supabase, set the four reminder-related env vars in Vercel, and add the `CRON_SECRET`/`CRON_ENDPOINT_URL` GitHub Actions repo secrets before this goes live.
 
 See [docs/06-releases/v1.2.0.md](docs/06-releases/v1.2.0.md) for the full change proposal.
 

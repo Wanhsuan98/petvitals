@@ -93,7 +93,36 @@ export const PetCaregiverSchema = z.object({
 // 累積口碑階段先固定為常數，之後如需依方案分級再改為讀取訂閱方案設定，不要一開始就過度設計
 export const MAX_CAREGIVERS_PER_PET = 3
 
+// ==========================================
+// 5. 主動提醒排程 Schema（訂閱 Pro 進階功能）
+// ==========================================
+export const ReminderScheduleSchema = z.object({
+  id: z.string().uuid().optional(),
+  petId: z.string().uuid(),
+  type: z.enum(['FLUID', 'MEDICATION', 'DAILY_LOG']),
+  label: z.string().min(1, '請輸入提醒名稱').max(20),
+  // 本地時間 HH:mm，MVP 只支援 Asia/Taipei 單一時區
+  timeOfDay: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, '時間格式必須為 HH:mm'),
+  enabled: z.boolean().default(true),
+  createdAt: z.string().datetime().optional()
+})
+
+// ==========================================
+// 6. 瀏覽器推播訂閱 Schema（Web Push，訂閱 Pro 進階功能）
+// 純粹是「這個使用者的這個裝置」的憑證，不透過 cat_profiles/pet_caregivers 判斷任何權限
+// ==========================================
+export const PushSubscriptionSchema = z.object({
+  id: z.string().uuid().optional(),
+  userId: z.string().uuid(),
+  endpoint: z.string().url(),
+  p256dh: z.string().min(1),
+  auth: z.string().min(1),
+  createdAt: z.string().datetime().optional()
+})
+
 export type CatProfile = z.infer<typeof CatProfileSchema>
 export type DailyCareLog = z.infer<typeof DailyCareLogSchema>
 export type BloodTest = z.infer<typeof BloodTestSchema>
 export type PetCaregiver = z.infer<typeof PetCaregiverSchema>
+export type ReminderSchedule = z.infer<typeof ReminderScheduleSchema>
+export type PushSubscriptionRecord = z.infer<typeof PushSubscriptionSchema>
