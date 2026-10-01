@@ -1,0 +1,18 @@
+name: Send reminders
+
+# 取代 Vercel Cron：Hobby 方案只能一天觸發一次，Pro 方案才支援到分鐘級；
+# GitHub Actions 的 schedule 免費且最小間隔 5 分鐘，詳見 docs/04-architecture/backend.md
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call reminder cron endpoint
+        run: |
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.CRON_ENDPOINT_URL }}"

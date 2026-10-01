@@ -15,6 +15,38 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+// 主動提醒推播：payload 是 api/cron/send-reminders 送出的 JSON 字串 { title, body }
+self.addEventListener('push', (event) => {
+  if (!event.data) return
+
+  let payload
+  try {
+    payload = event.data.json()
+  } catch {
+    payload = { title: 'PetVitals', body: event.data.text() }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title ?? 'PetVitals', {
+      body: payload.body,
+      icon: '/icon.svg',
+      badge: '/icon.svg'
+    })
+  )
+})
+
+// 點擊通知時優先聚焦已開啟的分頁，而不是永遠開一個新分頁
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsList) => {
+      const existing = clientsList.find((client) => 'focus' in client)
+      if (existing) return existing.focus()
+      return self.clients.openWindow('/')
+    })
+  )
+})
+
 // 僅快取 GET 請求，且採「先網路、失敗才回退快取」策略：
 // 確保打卡等資料永遠讀寫最新的網路回應，離線時只能瀏覽先前造訪過的頁面（不做背景同步佇列）
 self.addEventListener('fetch', (event) => {
