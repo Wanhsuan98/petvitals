@@ -53,7 +53,12 @@ export async function signInWithGoogle() {
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: `${origin}/auth/callback` }
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+      // 沒有這個參數時，只要瀏覽器裡還留著 Google 自己的 session（我們這邊登出不會清掉），
+      // Google 會直接沿用上次的帳號靜默完成登入，使用者無法切換成另一組 Google 帳號
+      queryParams: { prompt: 'select_account' }
+    }
   })
 
   if (error || !data.url) {
