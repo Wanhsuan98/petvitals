@@ -15,14 +15,14 @@ Introduced: v1.2.0
 | petId     | UUID           | Yes      | Cat profile ID                                             |
 | type      | enum           | Yes      | `FLUID` \| `MEDICATION` \| `DAILY_LOG`                     |
 | label     | string         | Yes      | 使用者自訂顯示名稱，最多 20 字，例如「早上輸液」「降磷藥」 |
-| timeOfDay | string (HH:mm) | Yes      | 本地時間；MVP 僅支援 Asia/Taipei 單一時區                  |
+| timeOfDay | string (HH:mm) | Yes      | 本地時間；MVP 僅支援 Asia/Taipei 單一時區；分鐘只能是 5 的倍數 |
 | enabled   | boolean        | Yes      | 預設 `true`                                                |
 | createdAt | datetime       | No       | 建立時間                                                   |
 
 ## Validation
 
 - `label`：最多 20 字
-- `timeOfDay`：格式須為 `HH:mm`（00:00–23:59）
+- `timeOfDay`：格式須為 `HH:mm`（00:00–23:59），且分鐘必須是 5 的倍數（00/05/10/.../55）——cron 比對邏輯是把現在時間無條件捨去到最近的 5 分鐘整數再比對，非 5 倍數的時間永遠不會被匹配到，所以直接在 schema 層擋掉；前端表單也用 `step={300}` 限制時間選擇器只能選 5 分鐘間隔
 
 ## Business Rules
 

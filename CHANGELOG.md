@@ -24,6 +24,7 @@
 
 - `api/cron/send-reminders` was unreachable in production: the global auth middleware redirected the unauthenticated GitHub Actions request to `/login` before the route's own `CRON_SECRET` check ever ran. Exempted this path the same way the ECPay webhook callback is.
 - Signing out of PetVitals only cleared our own session, not Google's; signing in with Google again silently reused whatever Google account was already active on the device, with no way to switch accounts. Added `prompt: select_account` to force the account picker every time.
+- A reminder's `timeOfDay` accepted any minute value, but the cron matcher floors the current time to the nearest 5-minute mark before comparing. Schedules set to a non-multiple-of-5 minute (e.g. `18:28`) could never match and would silently never fire. The time input now steps in 5-minute increments and the schema rejects non-5-minute values.
 
 See [docs/06-releases/v1.2.0.md](docs/06-releases/v1.2.0.md) for the full change proposal.
 
