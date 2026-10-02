@@ -101,8 +101,11 @@ export const ReminderScheduleSchema = z.object({
   petId: z.string().uuid(),
   type: z.enum(['FLUID', 'MEDICATION', 'DAILY_LOG']),
   label: z.string().min(1, '請輸入提醒名稱').max(20),
-  // 本地時間 HH:mm，MVP 只支援 Asia/Taipei 單一時區
-  timeOfDay: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, '時間格式必須為 HH:mm'),
+  // 本地時間 HH:mm，MVP 只支援 Asia/Taipei 單一時區。
+  // 分鐘只接受 5 的倍數（00/05/10/.../55）：cron（api/cron/send-reminders）是把現在時間
+  // 無條件捨去到最近的 5 分鐘整數再比對，非 5 的倍數的時間永遠不會被匹配到，等於是個永遠
+  // 不會觸發的排程，所以直接在 schema 層擋掉，不讓這種資料被建立
+  timeOfDay: z.string().regex(/^([01]\d|2[0-3]):[0-5][05]$/, '時間必須是 5 分鐘的整數倍（例如 09:00、09:05）'),
   enabled: z.boolean().default(true),
   createdAt: z.string().datetime().optional()
 })

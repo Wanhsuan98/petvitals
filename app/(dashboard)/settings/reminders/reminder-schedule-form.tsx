@@ -98,7 +98,9 @@ export function ReminderScheduleForm() {
 
       <div className="space-y-1.5">
         <Label htmlFor="timeOfDay">提醒時間</Label>
-        <Input id="timeOfDay" type="time" {...register('timeOfDay')} />
+        {/* step=300 秒（5 分鐘）：cron 只會在每個 5 分鐘整數點比對排程，
+            選不到整數分鐘的時間就永遠不會觸發，所以選擇器只開放 5 分鐘間隔 */}
+        <Input id="timeOfDay" type="time" step={300} {...register('timeOfDay')} />
         {errors.timeOfDay && <p className="text-xs text-destructive">{errors.timeOfDay.message}</p>}
       </div>
 
