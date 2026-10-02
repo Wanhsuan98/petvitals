@@ -25,6 +25,11 @@ const TYPE_OPTIONS = [
   { value: 'DAILY_LOG', label: '每日打卡' }
 ] as const
 
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, '0'))
+// 分鐘只列 5 的倍數：cron 只在每個 5 分鐘整數點比對排程，原生 <input type="time"> 的
+// step 屬性在手機瀏覽器（尤其 iOS Safari）上不保證生效，改用下拉選單從源頭排除非法選項
+const MINUTE_OPTIONS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55']
+
 const reminderFormSchema = ReminderScheduleSchema.pick({
   type: true,
   label: true,
@@ -97,10 +102,46 @@ export function ReminderScheduleForm() {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="timeOfDay">提醒時間</Label>
-        {/* step=300 秒（5 分鐘）：cron 只會在每個 5 分鐘整數點比對排程，
-            選不到整數分鐘的時間就永遠不會觸發，所以選擇器只開放 5 分鐘間隔 */}
-        <Input id="timeOfDay" type="time" step={300} {...register('timeOfDay')} />
+        <Label htmlFor="timeOfDay-hour">提醒時間</Label>
+        <Controller
+          control={control}
+          name="timeOfDay"
+          render={({ field }) => {
+            const [hour, minute] = field.value.split(':')
+            return (
+              <div className="flex items-center gap-2">
+                <Select value={hour} onValueChange={(newHour) => field.onChange(`${newHour}:${minute}`)}>
+                  <SelectTrigger id="timeOfDay-hour" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOUR_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-muted-foreground">:</span>
+                <Select
+                  value={minute}
+                  onValueChange={(newMinute) => field.onChange(`${hour}:${newMinute}`)}
+                >
+                  <SelectTrigger id="timeOfDay-minute" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MINUTE_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )
+          }}
+        />
         {errors.timeOfDay && <p className="text-xs text-destructive">{errors.timeOfDay.message}</p>}
       </div>
 
