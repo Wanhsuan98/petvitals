@@ -25,6 +25,25 @@ function toReminderSchedule(row: ReminderScheduleRow): ReminderSchedule {
   })
 }
 
+// 用在「列出一批排程」的情境：單一資料列解析失敗（例如 schema 收緊後，舊資料不再合法）
+// 不該拖垮整份清單讓使用者連頁面都打不開，只記錄並跳過那一筆，其他合法的排程照常顯示/照常推播
+function safeToReminderSchedule(row: ReminderScheduleRow): ReminderSchedule | null {
+  const parsed = ReminderScheduleSchema.safeParse({
+    id: row.id,
+    petId: row.pet_id,
+    type: row.type,
+    label: row.label,
+    timeOfDay: row.time_of_day,
+    enabled: row.enabled,
+    createdAt: new Date(row.created_at).toISOString()
+  })
+  if (!parsed.success) {
+    console.error('[reminder-schedules] 資料列不符合 schema，已略過', row.id, parsed.error.message)
+    return null
+  }
+  return parsed.data
+}
+
 // owner 跟 accepted caregiver 都能看（RLS 見 20260930000000），所以呼叫端要自己決定
 // 是否要顯示管理操作（canManage），這個函式本身不分身分，一律回傳完整清單
 export async function listReminderSchedulesForPet(
@@ -38,7 +57,9 @@ export async function listReminderSchedulesForPet(
     .order('time_of_day', { ascending: true })
 
   if (error) throw new Error(`讀取提醒排程失敗：${error.message}`)
-  return (data as ReminderScheduleRow[]).map(toReminderSchedule)
+  return (data as ReminderScheduleRow[])
+    .map(safeToReminderSchedule)
+    .filter((schedule): schedule is ReminderSchedule => schedule !== null)
 }
 
 // 用 owner 自己的 session 寫（RLS 只讓 owner 寫這張表）
@@ -103,12 +124,17 @@ export async function listDueReminders(
     .filter((row): row is RowWithCat & { cat_profiles: { name: string; owner_id: string } } =>
       Boolean(row.cat_profiles)
     )
-    .map((row) => ({
-      ...toReminderSchedule(row),
-      petName: row.cat_profiles.name,
-      ownerId: row.cat_profiles.owner_id,
-      lastSentOn: row.last_sent_on
-    }))
+    .map((row) => {
+      const schedule = safeToReminderSchedule(row)
+      if (!schedule) return null
+      return {
+        ...schedule,
+        petName: row.cat_profiles.name,
+        ownerId: row.cat_profiles.owner_id,
+        lastSentOn: row.last_sent_on
+      }
+    })
+    .filter((reminder): reminder is DueReminder => reminder !== null)
 }
 
 // 發送完成後記錄「今天已經發送過」，避免 GitHub Actions 排程的執行時間誤差
