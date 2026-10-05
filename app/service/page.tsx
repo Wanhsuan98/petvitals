@@ -29,18 +29,7 @@ export default function ServicePage() {
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">價格方案</h2>
         <p className="text-sm text-muted-foreground">
-          會員訂閱制：新台幣 199 元 / 月，可隨時取消訂閱。
-        </p>
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-lg font-semibold">退款政策</h2>
-        <p className="text-sm text-muted-foreground">
-          訂閱費用採按月計費，取消訂閱後於當期到期日前仍可繼續使用服務，到期後不再續扣款，恕不提供已扣款當期費用之部分退款。
-          若因系統故障導致服務無法正常使用達 7 日以上，可聯繫客服申請該期費用全額退還。
-        </p>
-        <p className="text-xs text-muted-foreground">
-          （以上為草稿內容，正式上線前請自行確認是否符合實際營運方式與消費者保護相關規範，非正式法律意見。）
+          PetVitals 目前所有功能永久免費，不收取任何訂閱或使用費用。
         </p>
       </section>
 
@@ -48,8 +37,7 @@ export default function ServicePage() {
         <h2 className="text-lg font-semibold">隱私權政策</h2>
         <p className="text-sm text-muted-foreground">
           本服務僅蒐集使用者為使用服務所必要提供之資料，包括帳號資訊與使用者自行輸入之貓咪照護紀錄（輸液量、飲水量、體重、
-          血檢數值等）。上述資料僅用於提供服務本身（如趨勢圖表與回診報告產出），不會提供第三方作行銷用途。金流交易資訊由
-          第三方支付服務商（綠界科技 ECPay）獨立處理，本服務不會接觸或儲存您的信用卡資訊。
+          血檢數值等）。上述資料僅用於提供服務本身（如趨勢圖表與回診報告產出），不會提供第三方作行銷用途。
         </p>
         <p className="text-xs text-muted-foreground">
           （以上為草稿內容，正式上線前建議諮詢專業法律意見以符合個資法相關規範，非正式法律意見。）

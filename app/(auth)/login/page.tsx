@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(signInWithMagicLink, INITIAL_STATE)
 
   return (
-    <main className="w-full max-w-sm space-y-6">
+    <main className="w-full min-w-0 max-w-sm space-y-6">
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">PetVitals 登入</h1>
         <p className="text-sm text-muted-foreground">
@@ -48,7 +48,7 @@ export default function LoginPage() {
           </p>
         )}
 
-        <Button type="submit" disabled={isPending} className="w-full">
+        <Button type="submit" size="lg" disabled={isPending} className="w-full">
           {isPending ? '寄送中…' : '寄送登入連結'}
         </Button>
       </form>
@@ -60,7 +60,7 @@ export default function LoginPage() {
       </div>
 
       <form action={signInWithGoogle}>
-        <Button type="submit" variant="outline" className="w-full">
+        <Button type="submit" variant="outline" size="lg" className="w-full">
           使用 Google 帳號登入
         </Button>
       </form>

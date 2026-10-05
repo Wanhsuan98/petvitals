@@ -11,11 +11,10 @@ Last Updated: v1.2.0
 - **資料抓取**：TanStack Query
 - **後端/資料庫**：Supabase (PostgreSQL + Auth + RLS)
 - **圖表**：Chart.js
-- **金流**：綠界 ECPay 定期定額訂閱（信用卡）
-- **推播（規劃中，v1.2）**：web-push (VAPID)
+- **推播**：web-push (VAPID)
 
 ## 子文件
 
 - [frontend.md](./frontend.md)：路由設計
-- [backend.md](./backend.md)：Supabase、RLS、ECPay、推播基礎設施
+- [backend.md](./backend.md)：Supabase、RLS、推播基礎設施
 - [pwa.md](./pwa.md)：Manifest、Service Worker、離線行為

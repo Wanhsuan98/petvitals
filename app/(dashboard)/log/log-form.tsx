@@ -1,6 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
+import { CircleCheck, Droplets } from 'lucide-react'
 import { startTransition, useActionState, useEffect, useMemo } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -18,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { DailyCareLogSchema, type DailyCareLog } from '@/lib/schemas'
+import { useLocalTime } from '@/lib/use-local-time'
 import { toLocalDateString } from '@/lib/utils'
 
 import { createDailyCareLogAction, type CreateDailyCareLogState } from './actions'
@@ -80,9 +82,8 @@ export function LogForm({ dailyCareLogs }: { dailyCareLogs: DailyCareLog[] }) {
     })
   }
 
-  // 用瀏覽器當下時間判斷「今天」，才會跟使用者實際感知的日期一致（伺服器時區可能是 UTC）；
-  // 不能用 useMemo 固定住，否則 PWA 若跨過午夜仍未重新掛載，會一直停在昨天
-  const todayDate = toLocalDateString(new Date())
+  const localTime = useLocalTime()
+  const todayDate = localTime === null ? '' : toLocalDateString(new Date(localTime))
   const todayLogs = useMemo(
     () => dailyCareLogs.filter((log) => log.date === todayDate),
     [dailyCareLogs, todayDate]
@@ -102,6 +103,8 @@ export function LogForm({ dailyCareLogs }: { dailyCareLogs: DailyCareLog[] }) {
             <NumberField
               id="subQFluidMl"
               label="皮下輸液量 (ml)"
+              unit="ml"
+              placeholder="例如：150"
               register={register}
               registerOptions={{ valueAsNumber: true }}
               error={errors.subQFluidMl}
@@ -110,6 +113,8 @@ export function LogForm({ dailyCareLogs }: { dailyCareLogs: DailyCareLog[] }) {
             <NumberField
               id="waterIntakeMl"
               label="飲水量 (ml)"
+              unit="ml"
+              placeholder="例如：180"
               register={register}
               registerOptions={{ valueAsNumber: true }}
               error={errors.waterIntakeMl}
@@ -119,6 +124,8 @@ export function LogForm({ dailyCareLogs }: { dailyCareLogs: DailyCareLog[] }) {
               id="weightKg"
               label="體重 (kg，選填)"
               step="0.1"
+              unit="kg"
+              placeholder="例如：4.15"
               register={register}
               registerOptions={{
                 setValueAs: (value) => (value === '' ? undefined : Number(value))
@@ -150,8 +157,9 @@ export function LogForm({ dailyCareLogs }: { dailyCareLogs: DailyCareLog[] }) {
 
             <NumberField
               id="vomitCount"
-              label="今日嘔吐次數"
+              label="今日嘔吐次數（0–20 次）"
               inputMode="numeric"
+              unit="次"
               register={register}
               registerOptions={{ valueAsNumber: true }}
               error={errors.vomitCount}
@@ -159,7 +167,13 @@ export function LogForm({ dailyCareLogs }: { dailyCareLogs: DailyCareLog[] }) {
 
             <div className="space-y-1.5">
               <Label htmlFor="notes">備註（選填）</Label>
-              <Textarea id="notes" rows={2} maxLength={100} {...register('notes')} />
+              <Textarea
+                id="notes"
+                rows={2}
+                maxLength={100}
+                placeholder="精神好、有曬太陽、下午排尿正常..."
+                {...register('notes')}
+              />
               {errors.notes && <p className="text-xs text-destructive">{errors.notes.message}</p>}
             </div>
 
@@ -169,31 +183,50 @@ export function LogForm({ dailyCareLogs }: { dailyCareLogs: DailyCareLog[] }) {
               </p>
             )}
 
-            <Button type="submit" disabled={isSubmitting || isPending} className="w-full">
-              {isSubmitting || isPending ? '記錄中…' : '完成打卡'}
+            <Button type="submit" size="lg" disabled={isSubmitting || isPending} className="w-full">
+              {isSubmitting || isPending ? (
+                '記錄中…'
+              ) : (
+                <>
+                  <CircleCheck className="size-5" aria-hidden="true" />
+                  完成打卡
+                </>
+              )}
             </Button>
           </form>
         </CardContent>
       </Card>
 
       {todayLogs.length > 0 && (
-        <Card aria-label="今日已記錄">
-          <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">今日已記錄</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <section aria-label="今日已記錄">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-heading text-base font-bold">今日已記錄 ({todayLogs.length} 筆)</h2>
+          </div>
+          <div className="space-y-3">
             {todayLogs.map((log) => (
-              <div key={log.id} className="rounded-lg border p-2 text-sm">
-                {new Date(log.recordedAt).toLocaleTimeString('zh-TW', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-                ・輸液 {log.subQFluidMl}ml・飲水 {log.waterIntakeMl}ml
-                {typeof log.weightKg === 'number' ? `・體重 ${log.weightKg}kg` : ''}
+              <div
+                key={log.id}
+                className="flex items-center justify-between rounded-2xl bg-card p-4 shadow-(--card-shadow)"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
+                    <Droplets className="size-5" aria-hidden="true" />
+                  </span>
+                  <p className="text-sm font-bold">
+                    輸液 {log.subQFluidMl}ml・飲水 {log.waterIntakeMl}ml
+                    {typeof log.weightKg === 'number' ? `・體重 ${log.weightKg}kg` : ''}
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                  {new Date(log.recordedAt).toLocaleTimeString('zh-TW', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       )}
     </div>
   )

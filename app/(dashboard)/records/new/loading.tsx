@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
-export default function RemindersPageLoading() {
+export default function NewBloodTestPageLoading() {
   return (
     <div className="space-y-4">
       <div className="mb-4 flex items-center gap-2">
@@ -10,32 +10,14 @@ export default function RemindersPageLoading() {
       </div>
       <Card>
         <CardHeader>
-          <Skeleton className="h-5 w-20" />
-        </CardHeader>
-        <CardContent className="space-y-2">
           <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-8 w-40" />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-5 w-28" />
         </CardHeader>
         <CardContent className="space-y-4">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-5 w-24" />
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
         </CardContent>
       </Card>
     </div>

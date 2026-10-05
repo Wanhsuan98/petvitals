@@ -4,6 +4,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 export default function CaregiversPageLoading() {
   return (
     <div className="space-y-4">
+      <div className="mb-4 flex items-center gap-2">
+        <Skeleton className="size-8 rounded-full" />
+        <Skeleton className="h-6 w-28" />
+      </div>
       <Card>
         <CardHeader>
           <Skeleton className="h-5 w-24" />

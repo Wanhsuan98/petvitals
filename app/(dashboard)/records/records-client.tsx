@@ -124,13 +124,13 @@ export function RecordsClient({
                   label: '體重 (kg)',
                   data: dailyPoints.map((point) => point.weightKg ?? null),
                   yAxisID: 'y',
-                  color: '#0f766e'
+                  color: '#557a63'
                 },
                 {
                   label: '每日輸液量 (ml)',
                   data: dailyPoints.map((point) => point.totalFluidMl),
                   yAxisID: 'y1',
-                  color: '#f59e0b'
+                  color: '#c98255'
                 }
               ]}
             />
@@ -157,19 +157,19 @@ export function RecordsClient({
                   label: 'BUN (mg/dL)',
                   data: sortedBloodTests.map((test) => test.bun),
                   yAxisID: 'y',
-                  color: '#0f766e'
+                  color: '#557a63'
                 },
                 {
                   label: 'Creatinine (mg/dL)',
                   data: sortedBloodTests.map((test) => test.creatinine),
                   yAxisID: 'y',
-                  color: '#2563eb'
+                  color: '#c98255'
                 },
                 {
                   label: '血磷 Phosphorus (mg/dL)',
                   data: sortedBloodTests.map((test) => test.phosphorus),
                   yAxisID: 'y1',
-                  color: '#f59e0b'
+                  color: '#d4a84f'
                 }
               ]}
             />

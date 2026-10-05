@@ -16,13 +16,12 @@
 - ✓ 生化血檢紀錄與 IRIS 分期血磷警示
 - ✓ 多軸趨勢圖表（體重 vs 輸液量、BUN/Crea vs 血磷）
 - ✓ 一鍵匯出 A4 回診摘要 PDF
-- ✓ 綠界 ECPay 定期定額訂閱
 - ✓ 多照護者協作（每隻貓最多 3 人，含飼主，永久免費）
 - ✓ 主動提醒排程（Web Push，永久免費）
 
 ## Tech Stack
 
-Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Shadcn UI · Zod · TanStack Query · Supabase (PostgreSQL + Auth + RLS) · Chart.js · 綠界 ECPay
+Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Shadcn UI · Zod · TanStack Query · Supabase (PostgreSQL + Auth + RLS) · Chart.js · web-push (VAPID)
 
 ## Getting Started
 
@@ -42,11 +41,6 @@ NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 
-# 選填：本機開發沒設定時會自動退回綠界公開的測試帳號
-ECPAY_MERCHANT_ID=...
-ECPAY_HASH_KEY=...
-ECPAY_HASH_IV=...
-
 # 主動提醒排程（Web Push）：用 `npx web-push generate-vapid-keys` 產生
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=...
 VAPID_PRIVATE_KEY=...
@@ -54,8 +48,6 @@ VAPID_SUBJECT=mailto:...
 # cron-job.org 排程打 api/cron/send-reminders 時要帶的共用密鑰，自訂一組隨機字串即可
 CRON_SECRET=...
 ```
-
-⚠️ 正式環境（`NODE_ENV=production`）必須設定 `ECPAY_MERCHANT_ID`/`ECPAY_HASH_KEY`/`ECPAY_HASH_IV`，否則啟動時會直接拋錯——這是刻意設計，避免正式站不小心用到公開的綠界測試帳號。
 
 ### 常用指令
 
@@ -71,16 +63,16 @@ pnpm format        # Prettier 格式化
 
 完整規格文件在 [`docs/`](docs/)：
 
-| 主題                     | 位置                                             |
-| :----------------------- | :----------------------------------------------- |
-| 產品定位、範疇、訂閱分級 | [docs/00-product/](docs/00-product/)             |
-| 各功能需求               | [docs/01-requirements/](docs/01-requirements/)   |
-| 資料契約 (Zod Schema)    | [docs/02-data-contract/](docs/02-data-contract/) |
-| 臨床/業務邏輯            | [docs/03-domain-logic/](docs/03-domain-logic/)   |
-| 系統架構                 | [docs/04-architecture/](docs/04-architecture/)   |
-| 設計決策紀錄 (ADR)       | [docs/05-decisions/](docs/05-decisions/)         |
-| 版本交付紀錄             | [docs/06-releases/](docs/06-releases/)           |
-| IRIS 參考標準、免責聲明  | [docs/99-reference/](docs/99-reference/)         |
+| 主題                    | 位置                                             |
+| :---------------------- | :----------------------------------------------- |
+| 產品定位、範疇          | [docs/00-product/](docs/00-product/)             |
+| 各功能需求              | [docs/01-requirements/](docs/01-requirements/)   |
+| 資料契約 (Zod Schema)   | [docs/02-data-contract/](docs/02-data-contract/) |
+| 臨床/業務邏輯           | [docs/03-domain-logic/](docs/03-domain-logic/)   |
+| 系統架構                | [docs/04-architecture/](docs/04-architecture/)   |
+| 設計決策紀錄 (ADR)      | [docs/05-decisions/](docs/05-decisions/)         |
+| 版本交付紀錄            | [docs/06-releases/](docs/06-releases/)           |
+| IRIS 參考標準、免責聲明 | [docs/99-reference/](docs/99-reference/)         |
 
 版本異動請見 [CHANGELOG.md](CHANGELOG.md)。
 
