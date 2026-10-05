@@ -38,4 +38,4 @@ Introduced: v1.2.0
 
 ## Related Architecture
 
-- [../04-architecture/backend.md](../04-architecture/backend.md)（GitHub Actions 排程觸發、`CRON_SECRET` 驗證）
+- [../04-architecture/backend.md](../04-architecture/backend.md)（cron-job.org 排程觸發、`CRON_SECRET` 驗證）
