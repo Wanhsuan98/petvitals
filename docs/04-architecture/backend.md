@@ -71,11 +71,16 @@ exists (
 
 - 資料表：`reminder_schedules`（貓的共用設定，owner 管理、accepted caregiver 唯讀，跟 `cat_profiles` 同一套權限模型，用 `owns_cat_profile`/`is_accepted_caregiver` 兩個 security definer 函式判斷）、`push_subscriptions`（純個人裝置資料，只有本人能讀寫，不受任何協作關係影響）。見 `20260930000000_add_reminder_infrastructure.sql`。
 - 需要一組 VAPID 金鑰對（`npx web-push generate-vapid-keys` 產生），公鑰給前端訂閱用（`NEXT_PUBLIC_VAPID_PUBLIC_KEY`）、私鑰僅存在伺服器端環境變數（`VAPID_PRIVATE_KEY`，絕對不能加 `NEXT_PUBLIC_` 前綴）。另外還需要 `VAPID_SUBJECT`（`mailto:` 開頭的聯絡信箱，web-push 規範要求）。
-- **排程觸發改用 GitHub Actions，不用 Vercel Cron**：查證後確認 Vercel Cron 在 Hobby 方案下只能一天觸發一次（且時間誤差可達 ±59 分鐘），完全不夠用；Pro 方案雖然能做到每分鐘，但需要付費升級。改成用 GitHub Actions 的 `schedule` 排程（最小間隔 5 分鐘，免費額度足夠）定時打 `api/cron/send-reminders`。
-- 這代表 `api/cron/send-reminders` 從「只有 Vercel 內部會呼叫」變成「對外可公開打的網址」，需要自己做驗證：用環境變數 `CRON_SECRET` 當共用密鑰，GitHub Actions 呼叫時帶在 header（`Authorization: Bearer $CRON_SECRET`），API 收到後比對不符就直接拒絕，避免任何人都能觸發推播。
-- `api/cron/send-reminders` 的邏輯：把現在時間轉成 Asia/Taipei 時區，無條件捨去到最近的 5 分鐘（跟排程間隔對齊，吸收 GitHub Actions 觸發時間的誤差），查出這個時間點所有 `enabled = true` 的排程；逐筆檢查 `last_sent_on` 是否已經是今天（是的話跳過，避免重複推播），通過才組出收件人清單（owner + accepted caregivers）並用 `web-push` 發送。這個功能永久免費，不檢查訂閱狀態。
+- **排程觸發：cron-job.org（第二次架構反轉，v1.2 開發期間）**：
+  1. 最初規劃用 Vercel Cron，查證後確認 Hobby 方案只能一天觸發一次（且時間誤差可達 ±59 分鐘），完全不夠用，Pro 方案要付費升級。
+  2. 改用 GitHub Actions 的 `schedule` 排程（設定 `*/5 * * * *`，官方文件標示最小間隔 5 分鐘、免費）。**實際上線後實測發現嚴重不準**：設定每 5 分鐘觸發一次，實測連續 5 次執行的間隔卻是 4-5 小時，GitHub 官方文件只提到「高負載時段可能延遲」，沒有提到會延遲到這種程度——這代表 GitHub Actions 的 `schedule` 對低流量的免費方案 repo 不保證接近設定的間隔執行，對一個「該打輸液了」這種時效性要求高的健康提醒功能是不可接受的。
+  3. 最終改用 [cron-job.org](https://cron-job.org/)（免費、最短 1 分鐘間隔、非中國服務、營運超過 15 年的專職排程觸發服務），設定 1 分鐘打一次 `api/cron/send-reminders`，用自訂 header 帶 `Authorization: Bearer $CRON_SECRET`。這類專職排程服務比「拿 CI 平台的 `schedule` 事件順便做排程」可靠得多。
+- `api/cron/send-reminders` 從「只有受信任排程服務會呼叫」變成「對外可公開打的網址」，用環境變數 `CRON_SECRET` 當共用密鑰驗證，比對不符就直接拒絕，避免任何人都能觸發推播。
+- `api/cron/send-reminders` 的邏輯：把現在時間轉成 Asia/Taipei 時區，無條件捨去到最近的 5 分鐘（跟排程粒度對齊），查出這個時間點所有 `enabled = true` 的排程；逐筆檢查 `last_sent_on` 是否已經是今天（是的話跳過，避免重複推播），通過才組出收件人清單（owner + accepted caregivers）並用 `web-push` 發送。這個功能永久免費，不檢查訂閱狀態。
+- 排程時間（`reminder_schedules.time_of_day`）只接受 5 分鐘整數倍：既然 cron 比對邏輯是捨去到最近 5 分鐘，非整數倍的時間永遠不會被匹配到；`settings/reminders` 的新增表單改用小時/分鐘兩個下拉選單（而非原生 `<input type="time">`），因為手機瀏覽器（尤其 iOS Safari）對原生時間輸入框的 `step` 屬性支援不一致，無法可靠限制選項。
+- `lib/data/reminder-schedules.ts` 的 `listReminderSchedulesForPet`/`listDueReminders` 用 `safeParse` 而非會丟錯的 `parse`：單一資料列不符合 schema（例如 schema 收緊後，既有資料變成不合法）只記錄 log 並跳過那一筆，不會讓一筆壞資料拖垮整份清單或整次 cron 掃描。
 - `lib/push/send.ts` 的 `sendPushToUsers()` 對同一批收件人的所有裝置平行發送，單一裝置失敗不影響其他裝置；遇到 `WebPushError` 且 `statusCode` 是 404/410（代表瀏覽器那端的訂閱已失效）就直接刪除該筆 `push_subscriptions`，避免之後每次都重複浪費一次注定失敗的請求。
-- 應用層：`app/(dashboard)/settings/reminders/`（排程管理頁 + 推播訂閱開關，owner 可管理、accepted caregiver 唯讀）、`app/api/push/subscribe`／`app/api/push/unsubscribe`（登入使用者自己裝置的推播憑證登記/刪除，走一般 RLS 不是 service-role）、`app/api/cron/send-reminders`（上述 cron 邏輯，用 service-role 略過 RLS）、`public/sw.js` 的 `push`/`notificationclick` 事件監聽、`.github/workflows/send-reminders.yml`（GitHub Actions 排程本體，需要在 repo secrets 設定 `CRON_SECRET`、`CRON_ENDPOINT_URL` 兩個值）。
+- 應用層：`app/(dashboard)/settings/reminders/`（排程管理頁 + 推播訂閱開關，owner 可管理、accepted caregiver 唯讀）、`app/api/push/subscribe`／`app/api/push/unsubscribe`（登入使用者自己裝置的推播憑證登記/刪除，走一般 RLS 不是 service-role）、`app/api/cron/send-reminders`（上述 cron 邏輯，用 service-role 略過 RLS）、`public/sw.js` 的 `push`/`notificationclick` 事件監聽。排程本體設定在 cron-job.org 帳號裡，不在 repo 裡。
 - iOS Safari 對 Web Push 有平台限制（需 iOS 16.4+，且僅限已加入主畫面的 PWA），已在提醒設定頁明確告知使用者裝置相容性。
 
 詳細需求見 [../01-requirements/notification.md](../01-requirements/notification.md)。

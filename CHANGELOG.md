@@ -6,7 +6,7 @@
 
 - Loading skeletons for the four dashboard tab routes (`loading.tsx`), reducing perceived lag when switching tabs.
 - Multi-caregiver collaboration: cat owners can invite up to 3 people (including themselves) by email to jointly log daily care and blood tests for a cat. Free for everyone, not gated behind the Pro subscription.
-- Proactive reminder scheduling via Web Push (fluid/medication/daily-log reminders). Owners manage schedules; accepted caregivers can view them and enable push notifications on their own device. Triggered by a GitHub Actions scheduled workflow (`*/5 * * * *`) instead of Vercel Cron, since Vercel's Hobby plan only supports daily cron triggers. Free for everyone, not gated behind the Pro subscription.
+- Proactive reminder scheduling via Web Push (fluid/medication/daily-log reminders). Owners manage schedules; accepted caregivers can view them and enable push notifications on their own device. Triggered by [cron-job.org](https://cron-job.org/) polling `api/cron/send-reminders` every minute. Free for everyone, not gated behind the Pro subscription.
 
 ### Changed
 
@@ -24,7 +24,9 @@
 
 - `api/cron/send-reminders` was unreachable in production: the global auth middleware redirected the unauthenticated GitHub Actions request to `/login` before the route's own `CRON_SECRET` check ever ran. Exempted this path the same way the ECPay webhook callback is.
 - Signing out of PetVitals only cleared our own session, not Google's; signing in with Google again silently reused whatever Google account was already active on the device, with no way to switch accounts. Added `prompt: select_account` to force the account picker every time.
-- A reminder's `timeOfDay` accepted any minute value, but the cron matcher floors the current time to the nearest 5-minute mark before comparing. Schedules set to a non-multiple-of-5 minute (e.g. `18:28`) could never match and would silently never fire. The time input now steps in 5-minute increments and the schema rejects non-5-minute values.
+- A reminder's `timeOfDay` accepted any minute value, but the cron matcher floors the current time to the nearest 5-minute mark before comparing. Schedules set to a non-multiple-of-5 minute (e.g. `18:28`) could never match and would silently never fire. The schema now rejects non-5-minute values, and the time field is two Select dropdowns (hour, minute limited to multiples of 5) instead of a native `<input type="time">`, since mobile browsers don't reliably honor its `step` attribute.
+- `listReminderSchedulesForPet`/`listDueReminders` used a throwing parse per row, so one row that no longer matched the schema (e.g. after the `timeOfDay` tightening above) crashed the entire settings/reminders page and the cron scan for every other schedule on that cat. Switched to a safe parse that logs and skips the offending row instead.
+- Production GitHub Actions scheduled runs were empirically 4-5 hours apart despite a `*/5 * * * *` cron expression, making timely reminders impossible. Replaced with [cron-job.org](https://cron-job.org/), a dedicated free scheduling service with a 1-minute minimum interval.
 
 See [docs/06-releases/v1.2.0.md](docs/06-releases/v1.2.0.md) for the full change proposal.
 
