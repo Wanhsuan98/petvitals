@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 
+import { PageHeader } from '@/components/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getOwnedCatProfile } from '@/lib/data/cat-profile'
 import { listCaregiversForPet } from '@/lib/data/pet-caregivers'
@@ -29,6 +30,7 @@ export default async function CaregiversPage() {
 
   return (
     <div className="space-y-4">
+      <PageHeader title="管理協作者" backHref="/settings" />
       <Card>
         <CardHeader>
           <CardTitle>邀請協作者</CardTitle>

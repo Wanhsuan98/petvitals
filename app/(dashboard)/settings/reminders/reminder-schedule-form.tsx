@@ -110,7 +110,10 @@ export function ReminderScheduleForm() {
             const [hour, minute] = field.value.split(':')
             return (
               <div className="flex items-center gap-2">
-                <Select value={hour} onValueChange={(newHour) => field.onChange(`${newHour}:${minute}`)}>
+                <Select
+                  value={hour}
+                  onValueChange={(newHour) => field.onChange(`${newHour}:${minute}`)}
+                >
                   <SelectTrigger id="timeOfDay-hour" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -152,7 +155,7 @@ export function ReminderScheduleForm() {
       )}
       {state.status === 'success' && <p className="text-sm text-primary">{state.message}</p>}
 
-      <Button type="submit" disabled={isSubmitting || isPending} className="w-full">
+      <Button type="submit" size="lg" disabled={isSubmitting || isPending} className="w-full">
         {isSubmitting || isPending ? '新增中…' : '新增提醒'}
       </Button>
     </form>

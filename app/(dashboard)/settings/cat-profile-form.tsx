@@ -161,7 +161,7 @@ export function CatProfileForm({ catProfile }: { catProfile: CatProfile | null }
       )}
       {state.status === 'success' && <p className="text-sm text-primary">{state.message}</p>}
 
-      <Button type="submit" disabled={isSubmitting || isPending} className="w-full">
+      <Button type="submit" size="lg" disabled={isSubmitting || isPending} className="w-full">
         {isSubmitting || isPending ? '儲存中…' : catProfile ? '更新貓咪資料' : '建立貓咪資料'}
       </Button>
     </form>

@@ -13,6 +13,10 @@
 - Multi-caregiver collaboration was originally planned as a Pro-subscription-gated feature; changed to permanently free during development. See [ADR-002](docs/05-decisions/ADR-002-subscription-tier-model.md).
 - Proactive reminder scheduling was also originally planned as Pro-subscription-gated; changed to permanently free after multi-caregiver collaboration was. As of this release, the ECPay subscription no longer unlocks any shipped feature — see the second Update in [ADR-002](docs/05-decisions/ADR-002-subscription-tier-model.md).
 
+### Removed
+
+- The entire ECPay subscription/payment integration: checkout flow, webhook callbacks, status-query fallback, and the subscription management UI in Settings. The subscription had not gated any shipped feature since the Changed entries above, and the only feature that might still use a paid tier (multi-cat management) isn't built yet — see the third Update in [ADR-002](docs/05-decisions/ADR-002-subscription-tier-model.md). The `subscriptions` table itself is left in place (unused) rather than dropped, since it holds real historical test-mode transaction records.
+
 ### Fixed (code review)
 
 - Caregivers could previously delete a cat's entire care history via the API (RLS granted `delete`, not just read/write); narrowed to `select`/`insert` only.

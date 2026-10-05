@@ -3,15 +3,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { getSupabaseEnv } from './env'
 
-const PUBLIC_PATHS = ['/login', '/service', '/api/ecpay/order-result']
+const PUBLIC_PATHS = ['/login', '/service']
 
 function isPublicPath(pathname: string): boolean {
   return (
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith('/auth/') ||
-    // ECPay 的 server-to-server 付款通知，沒有使用者 session，安全性由 CheckMacValue 驗證把關
-    pathname.startsWith('/api/ecpay/callback/') ||
-    // GitHub Actions 排程打這個 endpoint 時沒有使用者 session，安全性由 CRON_SECRET 驗證把關
+    // cron-job.org 排程打這個 endpoint 時沒有使用者 session，安全性由 CRON_SECRET 驗證把關
     pathname === '/api/cron/send-reminders'
   )
 }

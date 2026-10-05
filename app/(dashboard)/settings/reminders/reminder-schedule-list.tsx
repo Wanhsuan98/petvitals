@@ -3,6 +3,7 @@
 import { startTransition, useActionState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import type { ReminderSchedule } from '@/lib/schemas'
 
 import {
@@ -67,9 +68,9 @@ function ReminderScheduleRow({
     DELETE_INITIAL_STATE
   )
 
-  function onToggle() {
+  function onToggle(enabled: boolean) {
     startTransition(() => {
-      toggleAction({ id: schedule.id, enabled: !schedule.enabled })
+      toggleAction({ id: schedule.id, enabled })
     })
   }
 
@@ -89,10 +90,13 @@ function ReminderScheduleRow({
           <p className="text-xs text-muted-foreground">{schedule.enabled ? '已啟用' : '已暫停'}</p>
         </div>
         {canManage && (
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" disabled={isToggling} onClick={onToggle}>
-              {isToggling ? '處理中…' : schedule.enabled ? '暫停' : '啟用'}
-            </Button>
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={schedule.enabled}
+              disabled={isToggling}
+              onCheckedChange={onToggle}
+              aria-label={schedule.enabled ? '暫停這則提醒' : '啟用這則提醒'}
+            />
             <Button size="sm" variant="outline" disabled={isDeleting} onClick={onDelete}>
               {isDeleting ? '刪除中…' : '刪除'}
             </Button>

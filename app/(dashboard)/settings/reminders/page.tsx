@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 
+import { PageHeader } from '@/components/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getCatProfile } from '@/lib/data/cat-profile'
 import { listReminderSchedulesForPet } from '@/lib/data/reminder-schedules'
@@ -26,6 +27,7 @@ export default async function RemindersPage() {
 
   return (
     <div className="space-y-4">
+      <PageHeader title="主動提醒排程" backHref="/settings" />
       <Card>
         <CardHeader>
           <CardTitle>推播通知</CardTitle>

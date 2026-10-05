@@ -1,6 +1,6 @@
 # ADR-002: 訂閱分級模型——核心功能、多照護者協作與主動提醒排程皆永久免費
 
-Status: Accepted（v1.2.0 開發期間兩度修訂，見下方 Update）
+Status: Accepted（v1.2.0 開發期間三度修訂，見下方 Update，第三次已徹底移除 ECPay 訂閱機制）
 
 ## Context
 
@@ -33,6 +33,20 @@ RLS 層面的異動見 `supabase/migrations/20260918050000_remove_caregiver_subs
 目前的結果是：**ECPay 訂閱目前沒有解鎖任何已上線的功能**，唯一還規劃在訂閱 Pro 底下的是尚未開放的多隻貓咪管理（見 [../00-product/scope.md](../00-product/scope.md)）。ECPay 的金流串接本身沒有移除，仍保留在 v1.0 就上線的付費訂閱機制，但它現在對免費版使用者體驗沒有任何限制作用；是否要繼續維護這套金流、或是等多隻貓咪管理真的開發時再評估，是一個後續需要另外討論的產品決策，不在這次異動範圍內。
 
 應用層的異動：`app/(dashboard)/settings/reminders/actions.ts` 的 `createReminderScheduleAction`、`app/(dashboard)/settings/reminders/page.tsx`、`app/api/cron/send-reminders` 都拿掉了 `getLatestSubscription` 檢查。
+
+## Update：徹底移除 ECPay 訂閱機制
+
+上一個 Update 把「要不要繼續維護這套金流」列為待討論的開放問題；這次正式拍板：**整個 ECPay 訂閱機制直接移除**，不是只拿掉功能門檻，而是連金流串接本身都拔掉。
+
+決策理由很直接：訂閱已經沒有解鎖任何已上線的功能（見上一個 Update），唯一規劃中可能用到訂閱分級的多隻貓咪管理也還沒開發、沒有確定會收費（見 [roadmap.md](../00-product/roadmap.md)）。繼續保留一套沒有任何功能依賴、每次改動都要考慮金流正確性與安全性（CheckMacValue 驗證、webhook 冪等性）的程式碼，純粹是維護成本，沒有對應的產品價值。
+
+移除範圍：
+
+- 程式碼：`lib/ecpay/`、`app/api/ecpay/` 全部刪除；`lib/data/subscriptions.ts`、`app/(dashboard)/settings/subscription-section.tsx` 刪除；`app/(dashboard)/settings/actions.ts` 的 `cancelSubscriptionAction`/`refreshSubscriptionStatusAction`、`app/(dashboard)/settings/page.tsx` 的訂閱方案卡片一併移除。
+- 設定：`next.config.ts` 原本為了本機測試 ECPay webhook 而加的 `allowedDevOrigins` tunnel 白名單、`lib/supabase/middleware.ts` 的 ECPay 路徑白名單都拿掉。
+- `app/service/page.tsx`：價格方案改寫成「永久免費」、刪除退款政策整節（沒有付費就沒有退款可言）、隱私權政策拿掉綠界第三方金流處理的描述。
+- **資料庫層刻意不動**：`subscriptions` 資料表與其 RLS 政策保留不刪，只是變成沒有程式碼使用的孤兒資料表——裡面有真實跑過綠界金流測試的歷史交易紀錄，直接刪表是不可逆動作，沒有急迫性要現在處理，之後真的確定不需要了再評估。
+- 環境變數：`ECPAY_MERCHANT_ID`/`ECPAY_HASH_KEY`/`ECPAY_HASH_IV` 三個不再需要，需要自行到 Vercel 移除。
 
 ## Related
 

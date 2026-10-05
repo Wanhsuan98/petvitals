@@ -24,7 +24,9 @@ const buttonVariants = cva(
           'h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: 'h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
+        // lg 是手機表單主要送出按鈕專用的尺寸：高度接近 Apple HIG 建議的 44-48pt 觸控目標，
+        // 搭配 text-base 跟較大的圓角，視覺上更像原生 App 的主要 CTA，不是網頁常見的細長按鈕
+        lg: 'h-12 gap-1.5 rounded-2xl px-5 text-base active:not-aria-[haspopup]:scale-[0.99] has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4',
         icon: 'size-8',
         'icon-xs':
           "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
