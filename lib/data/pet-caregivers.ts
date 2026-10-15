@@ -61,6 +61,22 @@ export async function listPendingInvitationsForUser(
   }))
 }
 
+// 首頁鈴鐺角標只需要「幾筆」，不需要整份清單（含 cat_profiles 的 join），
+// 用 head 的 count 查詢比 listPendingInvitationsForUser 輕很多
+export async function countPendingInvitationsForUser(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('pet_caregivers')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('status', 'PENDING')
+
+  if (error) throw new Error(`讀取邀請數量失敗：${error.message}`)
+  return count ?? 0
+}
+
 // 用來判斷人數上限：PENDING 跟 ACCEPTED 都算，避免邀請中的名額之後全部被接受時超過上限。
 // owner 本人不算在這個計數裡（呼叫端要自己 +1）。
 export async function countActiveCaregiverSeats(

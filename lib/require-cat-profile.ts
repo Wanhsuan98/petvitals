@@ -11,6 +11,7 @@ import type { CatProfile } from '@/lib/schemas'
 export async function requireCatProfile(): Promise<{
   supabase: SupabaseClient
   catProfile: CatProfile
+  userId: string
 }> {
   const supabase = await createClient()
   const {
@@ -22,5 +23,5 @@ export async function requireCatProfile(): Promise<{
   const catProfile = await getCatProfile(supabase, user.id)
   if (!catProfile) redirect('/settings')
 
-  return { supabase, catProfile }
+  return { supabase, catProfile, userId: user.id }
 }

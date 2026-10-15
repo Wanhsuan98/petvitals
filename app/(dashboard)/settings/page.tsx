@@ -1,6 +1,7 @@
 import { Bell, ChevronRight, Users } from 'lucide-react'
 import Link from 'next/link'
 
+import { PendingInvitationsSection } from '@/components/pending-invitations-section'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getCatProfile } from '@/lib/data/cat-profile'
@@ -9,7 +10,6 @@ import { createClient } from '@/lib/supabase/server'
 
 import { signOut } from './actions'
 import { CatProfileForm } from './cat-profile-form'
-import { PendingInvitationsSection } from './pending-invitations-section'
 
 // 貓咪基本資料、目標水量與醫囑設定
 export default async function SettingsPage() {
@@ -26,6 +26,19 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-4">
+      <Link
+        href="/notifications"
+        className="flex items-center gap-3 rounded-2xl bg-card p-4 shadow-(--card-shadow) focus-visible:outline-2 focus-visible:outline-ring"
+      >
+        <Bell className="size-5 text-primary" aria-hidden="true" />
+        <span className="flex-1 text-sm font-semibold">通知中心</span>
+        {pendingInvitations.length > 0 && (
+          <span className="text-xs text-muted-foreground">
+            {pendingInvitations.length} 則待處理邀請
+          </span>
+        )}
+        <ChevronRight className="size-4" aria-hidden="true" />
+      </Link>
       <PendingInvitationsSection invitations={pendingInvitations} />
 
       <Card>
