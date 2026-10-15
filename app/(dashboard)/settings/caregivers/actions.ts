@@ -91,7 +91,10 @@ export async function inviteCaregiverAction(
   }
 
   revalidatePath('/settings/caregivers')
-  return { status: 'success', message: '已送出邀請，對方登入後可以在設定頁接受' }
+  revalidatePath('/notifications')
+  revalidatePath('/settings')
+  revalidatePath('/')
+  return { status: 'success', message: '已送出邀請，對方登入後可以在通知中心或設定頁接受' }
 }
 
 export type RemoveCaregiverState = {
@@ -124,5 +127,8 @@ export async function removeCaregiverAction(
   }
 
   revalidatePath('/settings/caregivers')
+  revalidatePath('/notifications')
+  revalidatePath('/settings')
+  revalidatePath('/')
   return { status: 'success', message: '已移除協作者' }
 }

@@ -78,3 +78,7 @@ exists (
 - iOS Safari 對 Web Push 有平台限制（需 iOS 16.4+，且僅限已加入主畫面的 PWA），已在提醒設定頁明確告知使用者裝置相容性。
 
 詳細需求見 [../01-requirements/notification.md](../01-requirements/notification.md)。
+
+## 通知中心第一版（v1.2）
+
+通知中心不新增資料表或變更 RLS。本人 session 查詢既有 `pet_caregivers` 的 PENDING 邀請，沿用接受邀請 action；推播憑證沿用 `push_subscriptions` 及現有 subscribe/unsubscribe API。第一版沒有提醒歷史與已讀資料，見 [ADR-004](../05-decisions/ADR-004-notification-center-mvp.md)。

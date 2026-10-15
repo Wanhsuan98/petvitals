@@ -6,14 +6,14 @@ import { ErrorFallback } from '@/components/error-fallback'
 
 export default function ExportError({
   error,
-  reset
+  retry
 }: {
   error: Error & { digest?: string }
-  reset: () => void
+  retry: () => void
 }) {
   useEffect(() => {
     console.error(error)
   }, [error])
 
-  return <ErrorFallback reset={reset} />
+  return <ErrorFallback retry={retry} />
 }

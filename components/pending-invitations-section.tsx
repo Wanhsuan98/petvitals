@@ -4,9 +4,11 @@ import { startTransition, useActionState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  acceptCaregiverInvitationAction,
+  type AcceptInvitationState
+} from '@/lib/actions/caregiver-invitations'
 import type { PendingInvitation } from '@/lib/data/pet-caregivers'
-
-import { acceptCaregiverInvitationAction, type AcceptInvitationState } from './actions'
 
 const INITIAL_STATE: AcceptInvitationState = { status: 'idle' }
 
@@ -18,9 +20,15 @@ function hasId(invitation: PendingInvitation): invitation is SavedInvitation {
   return typeof invitation.id === 'string'
 }
 
-export function PendingInvitationsSection({ invitations }: { invitations: PendingInvitation[] }) {
+export function PendingInvitationsSection({
+  invitations,
+  showEmpty = false
+}: {
+  invitations: PendingInvitation[]
+  showEmpty?: boolean
+}) {
   const savedInvitations = invitations.filter(hasId)
-  if (savedInvitations.length === 0) return null
+  if (savedInvitations.length === 0 && !showEmpty) return null
 
   return (
     <Card>
@@ -28,6 +36,9 @@ export function PendingInvitationsSection({ invitations }: { invitations: Pendin
         <CardTitle>邀請通知</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        {savedInvitations.length === 0 && (
+          <p className="text-sm text-muted-foreground">目前沒有待處理的協作邀請。</p>
+        )}
         {savedInvitations.map((invitation) => (
           <InvitationRow key={invitation.id} invitation={invitation} />
         ))}

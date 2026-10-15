@@ -19,6 +19,7 @@ import {
   TriangleAlert
 } from 'lucide-react'
 import { useMemo } from 'react'
+import Link from 'next/link'
 import { Line } from 'react-chartjs-2'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -45,10 +46,12 @@ function getGreeting(localTime: number | null): string {
 
 export function DashboardHomeClient({
   catProfile,
-  dailyCareLogs
+  dailyCareLogs,
+  pendingInvitationCount
 }: {
   catProfile: CatProfile
   dailyCareLogs: DailyCareLog[]
+  pendingInvitationCount: number
 }) {
   const localTime = useLocalTime()
   const todayDate = localTime === null ? '' : toLocalDateString(new Date(localTime))
@@ -103,13 +106,21 @@ export function DashboardHomeClient({
             慢慢來，你已經照顧得很棒了。
           </p>
         </div>
-        <button
-          type="button"
-          aria-label="通知"
-          className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground"
+        <Link
+          href="/notifications"
+          aria-label={`通知中心，${pendingInvitationCount} 則待處理邀請`}
+          className="relative mt-1 flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <Bell className="size-5" aria-hidden="true" />
-        </button>
+          {pendingInvitationCount > 0 && (
+            <span
+              aria-hidden="true"
+              className="absolute -top-1 -right-1 min-w-5 rounded-full bg-primary px-1 text-center text-xs leading-5 font-semibold text-primary-foreground"
+            >
+              {pendingInvitationCount > 99 ? '99+' : pendingInvitationCount}
+            </span>
+          )}
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

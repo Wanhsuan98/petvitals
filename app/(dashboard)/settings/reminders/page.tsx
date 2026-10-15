@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation'
 
 import { PageHeader } from '@/components/page-header'
+import { PushSubscribeToggle } from '@/components/push-subscribe-toggle'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getCatProfile } from '@/lib/data/cat-profile'
 import { listReminderSchedulesForPet } from '@/lib/data/reminder-schedules'
 import { createClient } from '@/lib/supabase/server'
 
-import { PushSubscribeToggle } from './push-subscribe-toggle'
 import { ReminderScheduleForm } from './reminder-schedule-form'
 import { ReminderScheduleList } from './reminder-schedule-list'
 

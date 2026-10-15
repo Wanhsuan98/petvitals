@@ -13,6 +13,8 @@ Introduced: v1.0.0
 - 首頁問候語依裝置本地時段顯示；伺服器與 hydration 首次渲染統一顯示「你好」，載入後才使用本地時間。今日狀態與體重趨勢每分鐘及回到前景時更新日期。
 - 首頁另以進度條呈現當日輸液/飲水達成度，與近 7 天體重趨勢圖（見 [daily-care.md](./daily-care.md)）。
 
+- 首頁鈴鐺導向 `/notifications` 通知中心；角標為本人待處理協作邀請數，0 筆不顯示，超過 99 筆顯示 `99+`，查看不會清除。詳見 [notification.md](./notification.md)。
+
 ## Related Documents
 
 - Domain Logic：[../03-domain-logic/daily-aggregation.md](../03-domain-logic/daily-aggregation.md)、[../03-domain-logic/daily-progress.md](../03-domain-logic/daily-progress.md)
