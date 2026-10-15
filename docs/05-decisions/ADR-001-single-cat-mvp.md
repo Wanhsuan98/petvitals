@@ -1,6 +1,6 @@
 # ADR-001: MVP 限制一人一貓
 
-Status: Accepted（v1.0），前向路徑規劃中（v1.2，見下方 Update）
+Status: Accepted（v1.0），前向路徑規劃中（v1.2，見下方兩段 Update；第二段取代第一段的付費定位）
 
 ## Context
 
@@ -18,3 +18,9 @@ MVP 開發時程僅 4 週，多隻貓咪管理需要額外的貓咪切換 UI、�
 ## Update (v1.2)
 
 產品討論中重新評估：多隻貓咪應該作為訂閱 Pro 的進階功能開放，而不是永久排除。已將前向相容設計記錄在 [../00-product/roadmap.md](../00-product/roadmap.md)，包含移除 unique constraint 的步驟。本次（v1.2）僅記錄路徑，不實際動 migration。
+
+## Update：多隻貓咪不再是付費功能（v1.2）
+
+上一段「作為訂閱 Pro 的進階功能開放」已不成立：ECPay 訂閱機制已在 v1.2 整個移除，PetVitals 所有功能永久免費，沒有訂閱分級（見 [ADR-002](./ADR-002-subscription-tier-model.md) 第三次 Update）。
+
+多隻貓咪管理仍維持「不永久排除、未來開放」的方向，但開放時對所有使用者免費，不會是付費功能。若需要數量上限，用途是防止濫用，而不是區分方案。一人一貓的 `unique` 約束與本 ADR 的原始決策在功能實際開發前維持不變；開發時程與實作步驟見 [../00-product/roadmap.md](../00-product/roadmap.md)。

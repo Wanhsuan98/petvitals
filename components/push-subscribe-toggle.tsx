@@ -7,6 +7,24 @@ import { getReadyServiceWorker, urlBase64ToUint8Array } from '@/lib/push/browser
 
 type SupportStatus = 'checking' | 'unsupported' | 'supported' | 'error'
 
+const PERMISSION_NOT_GRANTED_MESSAGE = '尚未允許通知權限，請再按一次並在詢問視窗選擇「允許」'
+
+// 先撤銷瀏覽器端（這才是「是否還會收到推播」的事實）。之後伺服器刪除若失敗，殘留的憑證
+// 會在下次推播收到 404/410 時被 lib/push/send.ts 自動清掉；反過來先刪伺服器的話，
+// 失敗會留下「畫面顯示已開啟、伺服器卻沒有紀錄」的不一致
+async function removeSubscription(subscription: PushSubscription): Promise<void> {
+  const { endpoint } = subscription
+  const isUnsubscribed = await subscription.unsubscribe()
+  if (!isUnsubscribed) throw new Error('瀏覽器取消推播訂閱失敗')
+
+  const response = await fetch('/api/push/unsubscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint })
+  })
+  if (!response.ok) console.error('[push] 伺服器端刪除訂閱失敗，等待推播時自動清理')
+}
+
 export function PushSubscribeToggle() {
   const [support, setSupport] = useState<SupportStatus>('checking')
   const [isSubscribed, setIsSubscribed] = useState(false)
@@ -42,9 +60,25 @@ export function PushSubscribeToggle() {
       const versionAtStart = mutationVersionRef.current
       const registration = await getReadyServiceWorker()
       const existing = await registration.pushManager.getSubscription()
+      const currentPermission = Notification.permission
+
+      let hasActiveSubscription = existing !== null
+      if (existing && currentPermission === 'denied') {
+        // 已開啟後才到系統設定封鎖通知：這筆訂閱已經收不到通知，留著只會讓按鈕顯示「關閉」、
+        // 跟封鎖說明互相矛盾。清掉後畫面回到「未開啟」，使用者重新允許後再開啟即可
+        await removeSubscription(existing).catch((cleanupError: unknown) => {
+          console.error('[push] 清除權限已被封鎖的訂閱失敗', cleanupError)
+        })
+        hasActiveSubscription = false
+      }
+
       if (cancelled || mutationVersionRef.current !== versionAtStart) return
-      setIsSubscribed(existing !== null)
-      setPermission(Notification.permission)
+      setIsSubscribed(hasActiveSubscription)
+      setPermission(currentPermission)
+      // 使用者到系統設定允許通知後回來，先前「尚未允許」的提示已經不成立
+      if (currentPermission === 'granted') {
+        setError((previous) => (previous === PERMISSION_NOT_GRANTED_MESSAGE ? null : previous))
+      }
       setSupport('supported')
     }
 
@@ -82,10 +116,20 @@ export function PushSubscribeToggle() {
     setIsPending(true)
     setError(null)
     try {
+      // 離線時 pushManager.subscribe() 不會失敗而是一直等網路，畫面會卡在「處理中…」
+      if (!navigator.onLine) {
+        setError('目前沒有網路連線，請連線後再開啟推播')
+        return
+      }
+
       const requestedPermission = await Notification.requestPermission()
-      setPermission(requestedPermission)
+      // 以 Notification.permission 為準顯示：iOS 的權限視窗被切換 App 打斷時，
+      // requestPermission() 可能回傳 denied，但系統實際儲存的仍是「尚未決定」
+      const currentPermission = Notification.permission
+      setPermission(currentPermission)
       if (requestedPermission !== 'granted') {
-        setError('需要允許瀏覽器通知權限才能接收提醒推播')
+        // 真的被封鎖時，畫面上的封鎖說明已經足夠，不重複顯示紅字
+        if (currentPermission !== 'denied') setError(PERMISSION_NOT_GRANTED_MESSAGE)
         return
       }
 
@@ -132,21 +176,7 @@ export function PushSubscribeToggle() {
     try {
       const registration = await getReadyServiceWorker()
       const subscription = await registration.pushManager.getSubscription()
-      if (subscription) {
-        const { endpoint } = subscription
-        // 先撤銷瀏覽器端（這才是「是否還會收到推播」的事實）。之後伺服器刪除若失敗，殘留的憑證
-        // 會在下次推播收到 404/410 時被 lib/push/send.ts 自動清掉；反過來先刪伺服器的話，
-        // 失敗會留下「畫面顯示已開啟、伺服器卻沒有紀錄」的不一致
-        const isUnsubscribed = await subscription.unsubscribe()
-        if (!isUnsubscribed) throw new Error('瀏覽器取消推播訂閱失敗')
-
-        const response = await fetch('/api/push/unsubscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ endpoint })
-        })
-        if (!response.ok) console.error('[push] 伺服器端刪除訂閱失敗，等待推播時自動清理')
-      }
+      if (subscription) await removeSubscription(subscription)
       setIsSubscribed(false)
     } catch {
       setError('關閉推播通知失敗，請稍後再試')
@@ -196,7 +226,7 @@ export function PushSubscribeToggle() {
     <div className="space-y-2">
       {permission === 'denied' && (
         <p role="status" className="text-sm text-muted-foreground">
-          本裝置的通知權限已被封鎖，請先到瀏覽器或系統設定允許通知，再重新整理此頁。
+          本裝置的通知權限已被封鎖，請先到瀏覽器或系統設定允許通知，回到這裡後再開啟推播。
         </p>
       )}
       <p className="text-sm text-muted-foreground">
