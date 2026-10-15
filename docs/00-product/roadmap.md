@@ -5,9 +5,11 @@ Last Updated: v1.2.0
 
 這份文件只放「還沒做」的前瞻規劃。已完成的交付時程請見 [../06-releases/](../06-releases/)。
 
-## 多隻貓咪管理（架構已預留）
+## 多隻貓咪管理（預計 v1.3）
 
-`cat_profiles` 目前有 `unique (owner_id)` 約束，資料庫層級鎖死一人一貓。若未來要開放多貓：
+**時程：排入 v1.3，v1.2（通知中心）收尾後的下一個版本開發。** 永久免費，不是付費功能（見 [ADR-001](../05-decisions/ADR-001-single-cat-mvp.md) 第二段 Update）。
+
+`cat_profiles` 目前有 `unique (owner_id)` 約束，資料庫層級鎖死一人一貓。開放多貓的步驟：
 
 1. 移除 `cat_profiles_owner_id_key` 這條 unique constraint。
 2. 應用層決定貓咪數量上限（例如跟協作者上限一致訂為 3 隻，實際數字屆時再拍板）——PetVitals 已經不收費，不會是訂閱分級的差異化功能，單純是防濫用的上限。
