@@ -73,3 +73,54 @@ export async function createBloodTest(
   if (error) throw new Error(`新增血檢紀錄失敗：${error.message}`)
   return toBloodTest(data as BloodTestRow)
 }
+
+export class BloodTestNotFoundError extends Error {
+  constructor() {
+    super('找不到這筆血檢紀錄，可能已被刪除或沒有權限，請重新整理頁面')
+    this.name = 'BloodTestNotFoundError'
+  }
+}
+
+export async function getBloodTest(
+  supabase: SupabaseClient,
+  id: string
+): Promise<BloodTest | null> {
+  const { data, error } = await supabase.from('blood_tests').select('*').eq('id', id).maybeSingle()
+
+  if (error) throw new Error(`讀取血檢紀錄失敗：${error.message}`)
+  return data ? toBloodTest(data as BloodTestRow) : null
+}
+
+// 不更新 pet_id：紀錄不能被搬到另一隻貓。RLS 擋下時 Supabase 不會回傳 error 而是 0 筆，
+// 必須用 .select() 確認真的有更新到，否則呼叫端會誤以為儲存成功
+export async function updateBloodTest(
+  supabase: SupabaseClient,
+  id: string,
+  input: Omit<BloodTestInput, 'petId'>
+): Promise<BloodTest> {
+  const { data, error } = await supabase
+    .from('blood_tests')
+    .update({
+      test_date: input.testDate,
+      hospital_name: input.hospitalName ?? null,
+      bun: input.bun,
+      creatinine: input.creatinine,
+      sdma: input.sdma ?? null,
+      phosphorus: input.phosphorus,
+      hct: input.hct ?? null,
+      notes: input.notes ?? null
+    })
+    .eq('id', id)
+    .select()
+
+  if (error) throw new Error(`更新血檢紀錄失敗：${error.message}`)
+  if (!data || data.length === 0) throw new BloodTestNotFoundError()
+  return toBloodTest(data[0] as BloodTestRow)
+}
+
+export async function deleteBloodTest(supabase: SupabaseClient, id: string): Promise<void> {
+  const { data, error } = await supabase.from('blood_tests').delete().eq('id', id).select('id')
+
+  if (error) throw new Error(`刪除血檢紀錄失敗：${error.message}`)
+  if (!data || data.length === 0) throw new BloodTestNotFoundError()
+}

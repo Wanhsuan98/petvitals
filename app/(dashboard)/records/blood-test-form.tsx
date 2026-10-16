@@ -12,10 +12,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { BloodTestSchema } from '@/lib/schemas'
+import { BloodTestSchema, type BloodTest } from '@/lib/schemas'
 import { toLocalDateString } from '@/lib/utils'
 
-import { createBloodTestAction, type CreateBloodTestState } from './actions'
+import { createBloodTestAction, type CreateBloodTestState } from './new/actions'
+import { updateBloodTestAction, type UpdateBloodTestState } from './actions'
 
 const bloodTestFormSchema = BloodTestSchema.omit({
   id: true,
@@ -37,11 +38,38 @@ const DEFAULT_VALUES: BloodTestFormInput = {
   notes: ''
 }
 
-const INITIAL_STATE: CreateBloodTestState = { status: 'idle' }
+const INITIAL_CREATE_STATE: CreateBloodTestState = { status: 'idle' }
+const INITIAL_UPDATE_STATE: UpdateBloodTestState = { status: 'idle' }
 
-export function NewBloodTestForm() {
+function toDefaultValues(bloodTest: BloodTest | undefined): BloodTestFormInput {
+  if (!bloodTest) return { ...DEFAULT_VALUES, testDate: toLocalDateString(new Date()) }
+  return {
+    testDate: bloodTest.testDate,
+    hospitalName: bloodTest.hospitalName ?? '',
+    bun: bloodTest.bun,
+    creatinine: bloodTest.creatinine,
+    sdma: bloodTest.sdma,
+    phosphorus: bloodTest.phosphorus,
+    hct: bloodTest.hct,
+    notes: bloodTest.notes ?? ''
+  }
+}
+
+// 新增與編輯共用同一份表單：傳入 bloodTest 就是編輯該筆紀錄
+export function BloodTestForm({ bloodTest }: { bloodTest?: BloodTest }) {
   const router = useRouter()
-  const [state, formAction, isPending] = useActionState(createBloodTestAction, INITIAL_STATE)
+  const [createState, createAction, isCreating] = useActionState(
+    createBloodTestAction,
+    INITIAL_CREATE_STATE
+  )
+  const [updateState, updateAction, isUpdating] = useActionState(
+    updateBloodTestAction,
+    INITIAL_UPDATE_STATE
+  )
+  const bloodTestId = bloodTest?.id
+  const isEditing = bloodTestId !== undefined
+  const state = isEditing ? updateState : createState
+  const isPending = isEditing ? isUpdating : isCreating
 
   const {
     register,
@@ -49,7 +77,7 @@ export function NewBloodTestForm() {
     formState: { errors, isSubmitting }
   } = useForm<BloodTestFormInput, unknown, BloodTestFormOutput>({
     resolver: zodResolver(bloodTestFormSchema),
-    defaultValues: { ...DEFAULT_VALUES, testDate: toLocalDateString(new Date()) }
+    defaultValues: toDefaultValues(bloodTest)
   })
 
   useEffect(() => {
@@ -58,7 +86,8 @@ export function NewBloodTestForm() {
 
   function onSubmit(values: BloodTestFormOutput) {
     startTransition(() => {
-      formAction(values)
+      if (bloodTestId) updateAction({ id: bloodTestId, values })
+      else createAction(values)
     })
   }
 
@@ -177,7 +206,7 @@ export function NewBloodTestForm() {
           ) : (
             <>
               <Save className="size-5" aria-hidden="true" />
-              儲存血檢紀錄
+              {isEditing ? '儲存變更' : '儲存血檢紀錄'}
             </>
           )}
         </Button>

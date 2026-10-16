@@ -12,7 +12,7 @@ Last Updated: v1.2.0
 
 ## RLS 模型變更（v1.2：多照護者協作，migration 已寫好，見 `supabase/migrations/20260918*`）
 
-開放協作者後，`daily_care_logs`/`blood_tests` 的政策需要新增「你是這隻貓的 accepted caregiver」條件。**owner 維持 `for all`（含 delete）；caregiver 只給 `select`/`insert`，不給 `delete`**（code review 抓到的問題：一開始 caregiver 分支也用 `for all`，等於任何協作者都能直接刪除整隻貓的照護紀錄，超出「僅能讀寫」的文件範疇，對追蹤病史的 App 是真實的資料保護風險。修正見 `20260922000000_restrict_caregiver_delete.sql`）：
+開放協作者後，`daily_care_logs`/`blood_tests` 的政策需要新增「你是這隻貓的 accepted caregiver」條件。20260922 曾把協作者限制為只有 `select`/`insert`（避免任何協作者直接刪光病史，見 `20260922000000_restrict_caregiver_delete.sql`），**後來改為協作者也能 `update`/`delete`**（`20261016000000_allow_caregivers_edit_delete_care_data.sql`，決策見 [ADR-007](../05-decisions/ADR-007-caregivers-edit-delete-care-data.md)）。`cat_profiles`、`pet_caregivers` 的政策不變，協作者仍然不能改貓咪資料或管理協作者：
 
 ```sql
 -- owner：for all（不變）
@@ -22,7 +22,7 @@ exists (
     and cat_profiles.owner_id = auth.uid()
 )
 
--- caregiver：分開的 select + insert 政策，都用同一個條件，但沒有 delete
+-- caregiver：分開的 select / insert / update / delete 政策，都用同一個條件
 exists (
   select 1 from pet_caregivers
   where pet_caregivers.pet_id = daily_care_logs.pet_id

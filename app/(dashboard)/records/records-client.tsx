@@ -13,6 +13,7 @@ import Link from 'next/link'
 import { useMemo } from 'react'
 import { Line } from 'react-chartjs-2'
 
+import { ConfirmDeleteButton } from '@/components/confirm-delete-button'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,9 +25,31 @@ import {
 } from '@/lib/clinical'
 import type { BloodTest, CatProfile, DailyCareLog } from '@/lib/schemas'
 
+import { deleteBloodTestAction } from './actions'
 
 function formatStageNumber(stage: CatProfile['irisStage']): string {
   return `第 ${stage.replace('STAGE_', '')} 期`
+}
+
+function BloodTestActions({ id, testDate }: { id: string; testDate: string }) {
+  return (
+    <div className="flex flex-wrap items-start gap-2 pt-1">
+      <Button
+        variant="outline"
+        size="sm"
+        nativeButton={false}
+        render={
+          <Link href={`/records/${id}/edit`} aria-label={`編輯 ${testDate} 的血檢紀錄`}>
+            編輯
+          </Link>
+        }
+      />
+      <ConfirmDeleteButton
+        itemLabel={`${testDate} 的血檢紀錄`}
+        onDelete={() => deleteBloodTestAction({ status: 'idle' }, id)}
+      />
+    </div>
+  )
 }
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
@@ -244,6 +267,7 @@ export function RecordsClient({
                       {phosphorusStatus.isHigh ? '血磷偏高' : '血磷正常'}
                     </Badge>
                     <p className="text-xs text-muted-foreground">{phosphorusStatus.message}</p>
+                    {test.id && <BloodTestActions id={test.id} testDate={test.testDate} />}
                   </CardContent>
                 </Card>
               )

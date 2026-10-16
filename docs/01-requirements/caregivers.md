@@ -11,7 +11,7 @@ Introduced: v1.2.0
 
 - 飼主（owner）可透過 email 邀請其他已註冊的 PetVitals 帳號成為同一隻貓的照護者（caregiver），共同查看與新增每日照護日誌、血檢紀錄。
 - 累積口碑階段先訂一個固定上限：**每隻貓最多 3 位協作者（含 owner 本人）**，做成常數（`MAX_CAREGIVERS_PER_PET`）而非分級方案，之後依實際使用回饋再評估要不要拆分更高階方案。決策脈絡見 [ADR-003](../05-decisions/ADR-003-caregiver-cap.md)。已達上限時，`settings/caregivers` 頁面會直接把邀請表單換成提示文字（不是讓使用者填完送出才在伺服器端擋下），伺服器端（應用層預先檢查 + DB trigger 兜底）仍然是實際把關的地方，前端只是提早給回饋。
-- 僅 owner 可以邀請/移除協作者與刪除貓咪資料；caregiver 僅能查看與新增每日照護日誌、血檢紀錄，**不能刪除**（code review 補上的限制，避免任何協作者都能直接刪光整隻貓的照護紀錄），也不能邀請他人。
+- 飼主與協作者對每日照護日誌、血檢紀錄有相同的**新增、編輯、刪除**權限（讓照顧責任平均分攤，見 [ADR-007](../05-decisions/ADR-007-caregivers-edit-delete-care-data.md)；先前曾限制協作者不能刪除，已由該 ADR 取代）。僅 owner 可以修改貓咪資料、邀請/移除協作者、管理提醒排程與刪除貓咪。目前沒有修改/刪除的稽核紀錄。
 - 這個功能永久免費，不綁定訂閱狀態（原本規劃成訂閱才能用，開發期間改為永久免費，見 [ADR-002](../05-decisions/ADR-002-subscription-tier-model.md) 的 Update）。
 - **單貓模式下一個帳號只能照顧一隻貓**（擁有的貓 + 已接受協作的貓合計一隻）：受邀者已在照顧一隻貓時，送出邀請與接受邀請都會被擋下並顯示「目前一個帳號只能照顧一隻貓」；已是協作者的帳號也不能再建立自己的貓咪資料。這是過渡限制，v1.3 多隻貓咪管理上線時移除，見 [ADR-005](../05-decisions/ADR-005-single-cat-caregiver-guard.md)。
 - 通知中心 `/notifications` 與設定頁均可查看及接受本人待處理邀請；沒有貓咪資料的登入者也能使用。接受成功後刷新通知中心、首頁角標、設定與提醒頁。
@@ -31,5 +31,5 @@ Introduced: v1.2.0
 
 - 資料契約：[../02-data-contract/pet-caregiver.md](../02-data-contract/pet-caregiver.md)
 - 權限與 RLS 設計：[../04-architecture/backend.md](../04-architecture/backend.md)
-- 決策紀錄：[ADR-002](../05-decisions/ADR-002-subscription-tier-model.md)、[ADR-003](../05-decisions/ADR-003-caregiver-cap.md)、[ADR-005](../05-decisions/ADR-005-single-cat-caregiver-guard.md)
+- 決策紀錄：[ADR-002](../05-decisions/ADR-002-subscription-tier-model.md)、[ADR-003](../05-decisions/ADR-003-caregiver-cap.md)、[ADR-005](../05-decisions/ADR-005-single-cat-caregiver-guard.md)、[ADR-007](../05-decisions/ADR-007-caregivers-edit-delete-care-data.md)
 - 變更提案：[../06-releases/v1.2.0.md](../06-releases/v1.2.0.md)

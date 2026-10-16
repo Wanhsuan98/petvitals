@@ -11,6 +11,7 @@ Introduced: v1.0.0
 
 - 支援 5 項核心指標記錄：BUN、Creatinine、SDMA、Phosphorus (P)、HCT。
 - 使用者依獸醫診斷結果手動設定/更新 IRIS 分期，系統依所選分期自動比對對應血磷控制上限並提示（非系統自動診斷判定）。
+- 血檢紀錄可以編輯與刪除（飼主與協作者皆可，見 [ADR-007](../05-decisions/ADR-007-caregivers-edit-delete-care-data.md)）：歷史清單每筆有「編輯」與「刪除」，編輯可修改所有數值與日期，刪除需二次確認；修改後血磷警示與分期提示會即時重新計算。
 - 最新一筆血檢的肌酸酐或 SDMA 落在比目前設定更高的 IRIS 分期區間時，血檢頁會顯示「可能需要和獸醫師確認分期」的提示，不會自動修改分期，也不會提示降級，見 [../03-domain-logic/stage-hint.md](../03-domain-logic/stage-hint.md)。
 
 ## Related Documents
