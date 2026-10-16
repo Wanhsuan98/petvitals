@@ -19,9 +19,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   checkWeightLossAlert,
   evaluatePhosphorusStatus,
+  evaluateStageHint,
   groupDailyCareLogsByDate
 } from '@/lib/clinical'
 import type { BloodTest, CatProfile, DailyCareLog } from '@/lib/schemas'
+
+
+function formatStageNumber(stage: CatProfile['irisStage']): string {
+  return `第 ${stage.replace('STAGE_', '')} 期`
+}
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
 
@@ -92,6 +98,24 @@ export function RecordsClient({
     [bloodTests]
   )
   const bloodTestsNewestFirst = useMemo(() => [...sortedBloodTests].reverse(), [sortedBloodTests])
+  const stageReviewHint = useMemo(() => {
+    const latestTest = bloodTestsNewestFirst[0]
+    if (!latestTest) return null
+    const hint = evaluateStageHint(catProfile.irisStage, {
+      creatinine: latestTest.creatinine,
+      sdma: latestTest.sdma
+    })
+    if (!hint.shouldSuggestReview) return null
+
+    const markerText = hint.markers
+      .map((marker) =>
+        marker === 'creatinine'
+          ? `肌酸酐 ${latestTest.creatinine} mg/dL`
+          : `SDMA ${latestTest.sdma} µg/dL`
+      )
+      .join('、')
+    return `最近一次血檢（${latestTest.testDate}）的${markerText}落在 IRIS ${formatStageNumber(hint.suggestedStage)}範圍，高於目前設定的${formatStageNumber(catProfile.irisStage)}。單次數值不能決定分期，可能需要和獸醫師確認分期是否要調整。`
+  }, [bloodTestsNewestFirst, catProfile.irisStage])
 
   return (
     <div className="space-y-6">
@@ -106,6 +130,12 @@ export function RecordsClient({
           className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
         >
           體重在近期窗口內下滑了 {weightAlert.dropRate}%，建議留意並諮詢獸醫師。
+        </div>
+      )}
+
+      {stageReviewHint && (
+        <div role="status" className="rounded-lg border bg-secondary p-3 text-sm">
+          {stageReviewHint}
         </div>
       )}
 
