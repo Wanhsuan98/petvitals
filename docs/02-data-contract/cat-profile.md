@@ -34,7 +34,8 @@ Introduced: v1.0.0
 
 ## Business Rules
 
-- `irisStage` 由使用者依獸醫診斷結果手動設定/更新，系統不做自動診斷判定。
+- `irisStage` 由使用者依獸醫診斷結果手動設定/更新，系統不做自動診斷判定。設定頁的分期選單會在每個選項旁顯示 IRIS 2026 貓的肌酸酐與 SDMA 參考區間，並在選單下方附警語（需獸醫師診斷、單一數值不能自行決定、SDMA 區間依 IDEXX 方法訂定）。區間來源與驗證紀錄見 [../99-reference/iris.md](../99-reference/iris.md)。
+- 設定頁平時以唯讀摘要顯示貓咪資料，按「編輯」才切成表單（儲存／取消）；尚未建立貓咪資料時直接顯示表單。協作者只看得到唯讀摘要。
 - `ownerId` 目前有資料庫層級 `unique` 約束，一個帳號只能有一筆 `cat_profiles`（一人一貓），詳見 [ADR-001](../05-decisions/ADR-001-single-cat-mvp.md)。
 
 ## Related Domain Logic

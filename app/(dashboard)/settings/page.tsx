@@ -51,21 +51,12 @@ export default async function SettingsPage() {
               尚未建立貓咪資料，請先填寫下方表單才能開始使用打卡與血檢紀錄功能。
             </p>
           )}
-          {catProfile && !isOwner ? (
-            <div className="space-y-1 text-sm">
-              <p className="text-muted-foreground">
-                你是協作者，{catProfile.name} 的基本資料由飼主管理，這裡僅供查看。
-              </p>
-              <p>
-                名字：<span className="font-medium">{catProfile.name}</span>
-              </p>
-              <p>
-                目標體重：<span className="font-medium">{catProfile.targetWeightKg} kg</span>
-              </p>
-            </div>
-          ) : (
-            <CatProfileForm catProfile={catProfile} />
+          {catProfile && !isOwner && (
+            <p className="text-sm text-muted-foreground">
+              你是協作者，{catProfile.name} 的基本資料由飼主管理，這裡僅供查看。
+            </p>
           )}
+          <CatProfileForm catProfile={catProfile} isReadOnly={!isOwner} />
           {catProfile && (
             <div className="space-y-2">
               {isOwner && (

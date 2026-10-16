@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { startTransition, useActionState, useEffect } from 'react'
+import { startTransition, useActionState, useCallback, useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
 import { NumberField } from '@/components/number-field'
@@ -24,12 +24,18 @@ import {
   type SaveCatProfileState
 } from './actions'
 
+// 貓的分期參考區間，來源為 IRIS Staging of CKD（Modified 2026），見 docs/99-reference/iris.md。
+// 只用來幫使用者對照獸醫報告，分期本身仍由使用者依獸醫診斷選擇，系統不依數值自動判定
 const IRIS_STAGE_OPTIONS = [
-  { value: 'STAGE_1', label: 'STAGE 1' },
-  { value: 'STAGE_2', label: 'STAGE 2' },
-  { value: 'STAGE_3', label: 'STAGE 3' },
-  { value: 'STAGE_4', label: 'STAGE 4' }
+  { value: 'STAGE_1', label: 'STAGE 1', range: '肌酸酐 <1.6 mg/dL｜SDMA <18 µg/dL' },
+  { value: 'STAGE_2', label: 'STAGE 2', range: '肌酸酐 1.6–2.8 mg/dL｜SDMA 18–25 µg/dL' },
+  { value: 'STAGE_3', label: 'STAGE 3', range: '肌酸酐 2.9–5.0 mg/dL｜SDMA 26–38 µg/dL' },
+  { value: 'STAGE_4', label: 'STAGE 4', range: '肌酸酐 >5.0 mg/dL｜SDMA >38 µg/dL' }
 ] as const
+
+function getIrisStageLabel(value: unknown): string {
+  return IRIS_STAGE_OPTIONS.find((option) => option.value === value)?.label ?? '請選擇 IRIS 分期'
+}
 
 const catProfileFormSchema = CatProfileSchema.omit({ id: true, ownerId: true, createdAt: true })
 
@@ -47,24 +53,108 @@ function toDefaultValues(catProfile: CatProfile | null): CatProfileFormInput {
   }
 }
 
-export function CatProfileForm({ catProfile }: { catProfile: CatProfile | null }) {
+// 貓咪資料是設定一次、很少修改的資料，平常只顯示唯讀摘要，避免捲動時誤觸輸入框；
+// 按「編輯」才切成表單。還沒有貓咪資料時直接顯示表單，不需要多按一步
+export function CatProfileForm({
+  catProfile,
+  isReadOnly = false
+}: {
+  catProfile: CatProfile | null
+  isReadOnly?: boolean
+}) {
+  const [isEditing, setIsEditing] = useState(!catProfile)
+  const [savedMessage, setSavedMessage] = useState<string | null>(null)
+
+  const handleSaved = useCallback((message?: string) => {
+    setSavedMessage(message ?? null)
+    setIsEditing(false)
+  }, [])
+
+  if (catProfile && (isReadOnly || !isEditing)) {
+    return (
+      <div className="space-y-4">
+        <CatProfileSummary catProfile={catProfile} />
+        {savedMessage && !isReadOnly && (
+          <p role="status" className="text-sm text-primary">
+            {savedMessage}
+          </p>
+        )}
+        {!isReadOnly && (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="w-full"
+            onClick={() => {
+              setSavedMessage(null)
+              setIsEditing(true)
+            }}
+          >
+            編輯
+          </Button>
+        )}
+      </div>
+    )
+  }
+
+  // 每次進入編輯都會重新掛載，上一次的錯誤訊息與未儲存的輸入不會殘留
+  return (
+    <CatProfileEditForm
+      catProfile={catProfile}
+      onSaved={handleSaved}
+      onCancel={catProfile ? () => setIsEditing(false) : undefined}
+    />
+  )
+}
+
+function SummaryRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="text-right font-medium">{children}</dd>
+    </div>
+  )
+}
+
+function CatProfileSummary({ catProfile }: { catProfile: CatProfile }) {
+  const stageOption = IRIS_STAGE_OPTIONS.find((option) => option.value === catProfile.irisStage)
+  return (
+    <dl className="space-y-3 text-sm">
+      <SummaryRow label="貓咪名字">{catProfile.name}</SummaryRow>
+      <SummaryRow label="出生年份">{catProfile.birthYear}</SummaryRow>
+      <SummaryRow label="目標體重">{catProfile.targetWeightKg} kg</SummaryRow>
+      <SummaryRow label="IRIS 分期">{stageOption?.label ?? catProfile.irisStage}</SummaryRow>
+      <SummaryRow label="每日飲水目標">{catProfile.dailyFluidTargetMl} ml</SummaryRow>
+      <SummaryRow label="醫囑單次皮下輸液量">{catProfile.subQFluidPrescribedMl} ml</SummaryRow>
+      <SummaryRow label="醫囑每日輸液次數">{catProfile.subQFluidFrequencyPerDay} 次</SummaryRow>
+    </dl>
+  )
+}
+
+function CatProfileEditForm({
+  catProfile,
+  onSaved,
+  onCancel
+}: {
+  catProfile: CatProfile | null
+  onSaved: (message?: string) => void
+  onCancel?: () => void
+}) {
   const [state, formAction, isPending] = useActionState(saveCatProfileAction, INITIAL_STATE)
 
   const {
     control,
     register,
     handleSubmit,
-    reset,
     formState: { errors, isSubmitting }
   } = useForm<CatProfileFormInput, unknown, CatProfileFormOutput>({
     resolver: zodResolver(catProfileFormSchema),
     defaultValues: toDefaultValues(catProfile)
   })
 
-  // 儲存成功後用最新資料重設表單的 dirty 狀態，避免使用者以為還有未儲存的變更
   useEffect(() => {
-    if (state.status === 'success') reset(undefined, { keepValues: true })
-  }, [state.status, reset])
+    if (state.status === 'success') onSaved(state.message)
+  }, [state, onSaved])
 
   function onSubmit(values: CatProfileFormOutput) {
     startTransition(() => {
@@ -115,18 +205,29 @@ export function CatProfileForm({ catProfile }: { catProfile: CatProfile | null }
           render={({ field }) => (
             <Select name={field.name} value={field.value} onValueChange={field.onChange}>
               <SelectTrigger id="irisStage" className="w-full">
-                <SelectValue placeholder="請選擇 IRIS 分期" />
+                <SelectValue placeholder="請選擇 IRIS 分期">{getIrisStageLabel}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {IRIS_STAGE_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                    <span className="flex flex-col gap-0.5 whitespace-normal">
+                      <span>{option.label}</span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {option.range}
+                      </span>
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
         />
+        <p className="text-xs text-muted-foreground">
+          區間為 IRIS 2026
+          貓慢性腎病分期參考，請依獸醫師的診斷選擇。分期需在飲水充足、狀態穩定時多次檢驗，並搭配其他檢查判斷，不能只靠單一數值自行決定；肌酸酐與
+          SDMA 落在不同期時，也請以獸醫師判斷為準。SDMA 區間依 IDEXX
+          檢驗方法訂定，其他檢驗廠牌不一定適用。
+        </p>
       </div>
 
       <NumberField
@@ -159,11 +260,24 @@ export function CatProfileForm({ catProfile }: { catProfile: CatProfile | null }
           {state.message}
         </p>
       )}
-      {state.status === 'success' && <p className="text-sm text-primary">{state.message}</p>}
 
-      <Button type="submit" size="lg" disabled={isSubmitting || isPending} className="w-full">
-        {isSubmitting || isPending ? '儲存中…' : catProfile ? '更新貓咪資料' : '建立貓咪資料'}
-      </Button>
+      <div className="flex gap-2">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            disabled={isSubmitting || isPending}
+            className="flex-1"
+            onClick={onCancel}
+          >
+            取消
+          </Button>
+        )}
+        <Button type="submit" size="lg" disabled={isSubmitting || isPending} className="flex-1">
+          {isSubmitting || isPending ? '儲存中…' : catProfile ? '儲存' : '建立貓咪資料'}
+        </Button>
+      </div>
     </form>
   )
 }
