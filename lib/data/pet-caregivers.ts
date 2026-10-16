@@ -93,6 +93,30 @@ export async function countActiveCaregiverSeats(
   return count ?? 0
 }
 
+// 單貓模式（ADR-005）的過渡檢查：使用者已經擁有自己的貓、或已經是某隻貓的 accepted 協作者，
+// 就不能再接受新的協作邀請——getCatProfile 只會回傳其中一隻，接受了也永遠看不到新的那隻。
+// 邀請時要查「別人」的資料，必須傳 service-role client；接受時查自己的資料，用本人 session 即可。
+// v1.3 開放多隻貓咪後連同呼叫端一起移除。
+export async function hasAccessibleCat(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const [ownedResult, acceptedResult] = await Promise.all([
+    supabase
+      .from('cat_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('owner_id', userId),
+    supabase
+      .from('pet_caregivers')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'ACCEPTED')
+  ])
+
+  if (ownedResult.error) throw new Error(`讀取貓咪資料失敗：${ownedResult.error.message}`)
+  if (acceptedResult.error) {
+    throw new Error(`讀取協作貓咪資料失敗：${acceptedResult.error.message}`)
+  }
+  return (ownedResult.count ?? 0) > 0 || (acceptedResult.count ?? 0) > 0
+}
+
 // auth.users 不對外開放查詢，找不找得到帳號要透過 service-role 呼叫這個
 // migration 裡定義的 security definer function（見 20260918020000_caregiver_invite_lookup.sql）
 export async function findUserIdByEmail(

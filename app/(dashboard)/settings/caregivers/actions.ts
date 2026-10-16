@@ -10,6 +10,7 @@ import {
   countActiveCaregiverSeats,
   createCaregiverInvitation,
   findUserIdByEmail,
+  hasAccessibleCat,
   removeCaregiver
 } from '@/lib/data/pet-caregivers'
 import { MAX_CAREGIVERS_PER_PET } from '@/lib/schemas'
@@ -69,6 +70,13 @@ export async function inviteCaregiverAction(
   }
   if (invitedUserId === user.id) {
     return { status: 'error', message: '不能邀請自己' }
+  }
+  // 提早回饋用；邀請 PENDING 期間對方狀態可能改變，真正把關在接受邀請那一端
+  if (await hasAccessibleCat(serviceRoleSupabase, invitedUserId)) {
+    return {
+      status: 'error',
+      message: '對方帳號已經在照顧一隻貓咪，目前一個帳號只能照顧一隻貓，暫時無法邀請'
+    }
   }
 
   try {

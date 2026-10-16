@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getCatProfile: vi.fn(),
   listInvitations: vi.fn(),
   acceptInvitation: vi.fn(),
+  hasAccessibleCat: vi.fn(),
   revalidatePath: vi.fn(),
   redirect: vi.fn((path: string): never => {
     throw new Error(`redirect:${path}`)
@@ -21,7 +22,8 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/data/cat-profile', () => ({ getCatProfile: mocks.getCatProfile }))
 vi.mock('@/lib/data/pet-caregivers', () => ({
   listPendingInvitationsForUser: mocks.listInvitations,
-  acceptCaregiverInvitation: mocks.acceptInvitation
+  acceptCaregiverInvitation: mocks.acceptInvitation,
+  hasAccessibleCat: mocks.hasAccessibleCat
 }))
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }))
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }))
@@ -41,6 +43,7 @@ beforeEach(() => {
   mocks.getUser.mockResolvedValue({ data: { user: { id: userId } } })
   mocks.getCatProfile.mockResolvedValue(null)
   mocks.listInvitations.mockResolvedValue([])
+  mocks.hasAccessibleCat.mockResolvedValue(false)
 })
 
 describe('notification center', () => {
@@ -111,6 +114,16 @@ describe('accepting invitations from the notification center', () => {
     mocks.acceptInvitation.mockRejectedValue(new Error('邀請已撤回'))
     const result = await acceptCaregiverInvitationAction({ status: 'idle' }, invitationId)
     expect(result).toEqual({ status: 'error', message: '邀請已撤回' })
+    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+  })
+
+  it('rejects acceptance when the user already looks after a cat (single-cat mode)', async () => {
+    mocks.hasAccessibleCat.mockResolvedValue(true)
+    const result = await acceptCaregiverInvitationAction({ status: 'idle' }, invitationId)
+    expect(result.status).toBe('error')
+    expect(result.message).toContain('一個帳號只能照顧一隻貓')
+    expect(mocks.hasAccessibleCat).toHaveBeenCalledWith(expect.anything(), userId)
+    expect(mocks.acceptInvitation).not.toHaveBeenCalled()
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 

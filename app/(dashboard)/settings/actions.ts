@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
-import { saveCatProfile } from '@/lib/data/cat-profile'
+import { getCatProfile, saveCatProfile } from '@/lib/data/cat-profile'
 import { CatProfileSchema } from '@/lib/schemas'
 import { createClient } from '@/lib/supabase/server'
 
@@ -44,6 +44,16 @@ export async function saveCatProfileAction(
   }
 
   try {
+    // 協作者在設定頁看不到建立表單，但 action 本身也要擋：單貓模式下（ADR-005）
+    // 建了自己的貓，getCatProfile 會優先回傳它，原本協作的那隻就整個看不到了
+    const currentCatProfile = await getCatProfile(supabase, user.id)
+    if (currentCatProfile && currentCatProfile.ownerId !== user.id) {
+      return {
+        status: 'error',
+        message: '你目前是其他貓咪的協作者，一個帳號只能照顧一隻貓，暫時無法建立自己的貓咪資料'
+      }
+    }
+
     await saveCatProfile(supabase, user.id, parsed.data)
   } catch (error) {
     return {

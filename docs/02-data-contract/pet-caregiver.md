@@ -31,6 +31,7 @@ Introduced: v1.2.0
 
 - 每隻貓最多 `MAX_CAREGIVERS_PER_PET`（= 3，owner 隱含算 1 人 + 本表 `PENDING`/`ACCEPTED` 筆數），跟訂閱狀態無關（這個功能永久免費，見 [ADR-002](../05-decisions/ADR-002-subscription-tier-model.md) 的 Update）。**同時在應用層跟 DB 層檢查**：應用層只是先做一次友善的預先檢查，真正擋住併發邀請超過上限的是 `before insert` trigger `enforce_caregiver_cap`（用 `pg_advisory_xact_lock` 序列化同一隻貓的併發新增，避免兩個併發邀請都通過預先檢查、都寫入成功）。這個數字目前在 `lib/schemas.ts` 跟 trigger 裡各寫一份，調整上限要兩邊一起改。
 - 只有 owner（`cat_profiles.owner_id = auth.uid()`）能新增/移除協作者。被邀請者只能把自己那筆從 `PENDING` 改成 `ACCEPTED`（接受邀請），且有 DB trigger 擋下 `petId`/`userId` 被偷改——這是實作時抓到的真實風險：如果 `with check` 只驗證 `status`/`userId`，被邀請者理論上可以在同一次 UPDATE 裡把 `petId` 改成自己從未受邀的另一隻貓，變相取得存取權。
+- 單貓模式下，同一個 `userId` 若已擁有 `cat_profiles` 或已有一筆 `ACCEPTED`，就不能再建立/接受新的邀請。只在應用層檢查（`hasAccessibleCat()`），沒有 DB 約束，見 [ADR-005](../05-decisions/ADR-005-single-cat-caregiver-guard.md)。
 - `invitedEmail` 的比對用 `lower()` 不分大小寫，避免 owner 輸入的大小寫跟帳號實際註冊的不同時查不到人。
 
 ## Related Requirements

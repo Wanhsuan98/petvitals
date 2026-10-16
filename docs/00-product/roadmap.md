@@ -13,7 +13,8 @@ Last Updated: v1.2.0
 
 1. 移除 `cat_profiles_owner_id_key` 這條 unique constraint。
 2. 應用層決定貓咪數量上限（例如跟協作者上限一致訂為 3 隻，實際數字屆時再拍板）——PetVitals 已經不收費，不會是訂閱分級的差異化功能，單純是防濫用的上限。
-3. 前端需新增貓咪切換 UI（目前所有頁面隱含「使用者只有一隻貓」，`requireCatProfile()` 等輔助函式需要改為接受 `petId` 參數而非隱含推斷）。
+3. 移除 [ADR-005](../05-decisions/ADR-005-single-cat-caregiver-guard.md) 的過渡檢查（`hasAccessibleCat()` 與邀請、接受邀請、建立貓咪三處的阻擋）。
+4. 前端需新增貓咪切換 UI（目前所有頁面隱含「使用者只有一隻貓」，`requireCatProfile()` 等輔助函式需要改為接受 `petId` 參數而非隱含推斷）。
 
 決策脈絡見 [ADR-001](../05-decisions/ADR-001-single-cat-mvp.md)。目前不需要動 migration，只需要保留這個路徑不被架構卡死。
 
