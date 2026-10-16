@@ -37,8 +37,9 @@ function toCatProfile(row: CatProfileRow): CatProfile {
 // 目前一位使用者僅對應一隻貓（MVP 範圍），沒有資料時回傳 null 交由呼叫端導去設定頁建立
 // userId 可能是貓的 owner，也可能只是被邀請的協作者（自己沒有貓）——
 // 先找自己擁有的貓，找不到才找自己是 accepted caregiver 的貓（取最早接受邀請的一筆）。
-// 一個人同時擁有自己的貓又是別人協作者的情況，目前只會回傳自己的貓，跟多隻貓咪管理是
-// 同一個未來要解的問題（見 docs/00-product/roadmap.md），v1.2 先不處理。
+// 一個人同時擁有自己的貓又是別人協作者的情況，邀請、接受邀請、建立貓咪三處都已擋下
+// （ADR-005）；擋下之前留下的舊資料仍只會回傳自己的貓，v1.3 多隻貓咪管理再一併解決
+// （見 docs/00-product/roadmap.md）。
 export async function getCatProfile(
   supabase: SupabaseClient,
   userId: string

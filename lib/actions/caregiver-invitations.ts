@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
-import { acceptCaregiverInvitation } from '@/lib/data/pet-caregivers'
+import { acceptCaregiverInvitation, hasAccessibleCat } from '@/lib/data/pet-caregivers'
 import { createClient } from '@/lib/supabase/server'
 
 export type AcceptInvitationState = {
@@ -21,6 +21,15 @@ export async function acceptCaregiverInvitationAction(
   if (!user) return { status: 'error', message: '登入狀態已過期，請重新登入' }
 
   try {
+    // 邀請送出時已經檢查過，但 PENDING 期間對方可能自己建了貓或先接受別的邀請，
+    // 舊邀請也沒經過那道檢查，所以這裡才是真正的把關（見 ADR-005）
+    if (await hasAccessibleCat(supabase, user.id)) {
+      return {
+        status: 'error',
+        message: '你的帳號已經在照顧一隻貓咪，目前一個帳號只能照顧一隻貓，暫時無法接受這個邀請'
+      }
+    }
+
     // RLS 只允許使用者把「自己」那筆邀請從 PENDING 改成 ACCEPTED，
     // 不需要在這裡額外檢查 invitationId 是不是屬於這個使用者
     await acceptCaregiverInvitation(supabase, invitationId)
