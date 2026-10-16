@@ -60,6 +60,57 @@ export function evaluatePhosphorusStatus(
   }
 }
 
+// 2b. 血檢數值是否落在比目前設定更高的 IRIS 分期區間（僅提示，絕不自動修改分期）
+// 區間為 IRIS Staging of CKD (Modified 2026) 貓的欄位，見 docs/99-reference/iris.md。
+// IRIS 區間在整數位以一位小數表示（肌酸酐 2.8 與 2.9、SDMA 25 與 26 之間沒有定義），
+// 這裡以「小於下一期的下限」切分，避免落在空隙的數值（例如 2.85）無法歸類
+const STAGE_ORDER: CatProfile['irisStage'][] = ['STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4']
+
+function stageFromCreatinine(creatinine: number): CatProfile['irisStage'] {
+  if (creatinine < 1.6) return 'STAGE_1'
+  if (creatinine < 2.9) return 'STAGE_2'
+  if (creatinine <= 5.0) return 'STAGE_3'
+  return 'STAGE_4'
+}
+
+function stageFromSdma(sdma: number): CatProfile['irisStage'] {
+  if (sdma < 18) return 'STAGE_1'
+  if (sdma < 26) return 'STAGE_2'
+  if (sdma <= 38) return 'STAGE_3'
+  return 'STAGE_4'
+}
+
+export function evaluateStageHint(
+  currentStage: CatProfile['irisStage'],
+  values: { creatinine: number; sdma?: number }
+): {
+  shouldSuggestReview: boolean
+  suggestedStage: CatProfile['irisStage']
+  markers: ('creatinine' | 'sdma')[]
+} {
+  const stageByMarker: { marker: 'creatinine' | 'sdma'; stage: CatProfile['irisStage'] }[] = [
+    { marker: 'creatinine', stage: stageFromCreatinine(values.creatinine) }
+  ]
+  if (typeof values.sdma === 'number') {
+    stageByMarker.push({ marker: 'sdma', stage: stageFromSdma(values.sdma) })
+  }
+
+  // 兩項指標不一致時 IRIS 建議以較高的一期為準，因此取兩者中較高者
+  const highestIndex = Math.max(...stageByMarker.map((item) => STAGE_ORDER.indexOf(item.stage)))
+  const suggestedStage = STAGE_ORDER[highestIndex]
+  const shouldSuggestReview = highestIndex > STAGE_ORDER.indexOf(currentStage)
+
+  return {
+    shouldSuggestReview,
+    suggestedStage,
+    markers: shouldSuggestReview
+      ? stageByMarker
+          .filter((item) => STAGE_ORDER.indexOf(item.stage) === highestIndex)
+          .map((item) => item.marker)
+      : []
+  }
+}
+
 // 3. 單次輸液量軟性比對（超出醫囑量僅提示，不擋存檔——防呆上限與醫療處方上限分離）
 export function checkFluidOverPrescribed(
   subQFluidMl: number,

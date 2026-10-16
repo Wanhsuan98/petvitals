@@ -36,6 +36,7 @@ Introduced: v1.0.0
 
 - 同一天允許多筆紀錄（含精確打卡時間），支援一天多次輸液的情境。
 - `date` 由 `recordedAt` 依本地時區派生，避免深夜打卡時因時區換算跨日，導致 `date` 與使用者實際感知的日期不一致。
+- 紀錄建立後可由飼主或協作者編輯、刪除；編輯只能修改內容（體重、輸液量、飲水量、食慾、嘔吐、備註），不能更改 `petId`、`recordedAt`、`date`。
 - 離線狀態不可新增紀錄（見 [../04-architecture/pwa.md](../04-architecture/pwa.md)）。
 - `subQFluidMl` 超過該貓醫囑量（`CatProfile.subQFluidPrescribedMl`）時僅提示，不阻止儲存——防呆上限（600ml）與醫療處方上限是分開的兩件事。
 

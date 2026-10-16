@@ -13,15 +13,44 @@ import Link from 'next/link'
 import { useMemo } from 'react'
 import { Line } from 'react-chartjs-2'
 
+import { ConfirmDeleteButton } from '@/components/confirm-delete-button'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   checkWeightLossAlert,
   evaluatePhosphorusStatus,
+  evaluateStageHint,
   groupDailyCareLogsByDate
 } from '@/lib/clinical'
 import type { BloodTest, CatProfile, DailyCareLog } from '@/lib/schemas'
+
+import { deleteBloodTestAction } from './actions'
+
+function formatStageNumber(stage: CatProfile['irisStage']): string {
+  return `第 ${stage.replace('STAGE_', '')} 期`
+}
+
+function BloodTestActions({ id, testDate }: { id: string; testDate: string }) {
+  return (
+    <div className="flex flex-wrap items-start gap-2 pt-1">
+      <Button
+        variant="outline"
+        size="sm"
+        nativeButton={false}
+        render={
+          <Link href={`/records/${id}/edit`} aria-label={`編輯 ${testDate} 的血檢紀錄`}>
+            編輯
+          </Link>
+        }
+      />
+      <ConfirmDeleteButton
+        itemLabel={`${testDate} 的血檢紀錄`}
+        onDelete={() => deleteBloodTestAction({ status: 'idle' }, id)}
+      />
+    </div>
+  )
+}
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
 
@@ -92,6 +121,24 @@ export function RecordsClient({
     [bloodTests]
   )
   const bloodTestsNewestFirst = useMemo(() => [...sortedBloodTests].reverse(), [sortedBloodTests])
+  const stageReviewHint = useMemo(() => {
+    const latestTest = bloodTestsNewestFirst[0]
+    if (!latestTest) return null
+    const hint = evaluateStageHint(catProfile.irisStage, {
+      creatinine: latestTest.creatinine,
+      sdma: latestTest.sdma
+    })
+    if (!hint.shouldSuggestReview) return null
+
+    const markerText = hint.markers
+      .map((marker) =>
+        marker === 'creatinine'
+          ? `肌酸酐 ${latestTest.creatinine} mg/dL`
+          : `SDMA ${latestTest.sdma} µg/dL`
+      )
+      .join('、')
+    return `最近一次血檢（${latestTest.testDate}）的${markerText}落在 IRIS ${formatStageNumber(hint.suggestedStage)}範圍，高於目前設定的${formatStageNumber(catProfile.irisStage)}。單次數值不能決定分期，可能需要和獸醫師確認分期是否要調整。`
+  }, [bloodTestsNewestFirst, catProfile.irisStage])
 
   return (
     <div className="space-y-6">
@@ -106,6 +153,12 @@ export function RecordsClient({
           className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
         >
           體重在近期窗口內下滑了 {weightAlert.dropRate}%，建議留意並諮詢獸醫師。
+        </div>
+      )}
+
+      {stageReviewHint && (
+        <div role="status" className="rounded-lg border bg-secondary p-3 text-sm">
+          {stageReviewHint}
         </div>
       )}
 
@@ -214,6 +267,7 @@ export function RecordsClient({
                       {phosphorusStatus.isHigh ? '血磷偏高' : '血磷正常'}
                     </Badge>
                     <p className="text-xs text-muted-foreground">{phosphorusStatus.message}</p>
+                    {test.id && <BloodTestActions id={test.id} testDate={test.testDate} />}
                   </CardContent>
                 </Card>
               )

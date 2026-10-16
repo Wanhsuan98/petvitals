@@ -5,6 +5,7 @@ import {
   checkFluidOverPrescribed,
   checkWeightLossAlert,
   evaluatePhosphorusStatus,
+  evaluateStageHint,
   groupDailyCareLogsByDate
 } from './clinical'
 import type { DailyCareLog } from './schemas'
@@ -91,6 +92,67 @@ describe('evaluatePhosphorusStatus', () => {
     expect(evaluatePhosphorusStatus('STAGE_3', 5.1).isHigh).toBe(true)
     expect(evaluatePhosphorusStatus('STAGE_4', 5.5).isHigh).toBe(false)
     expect(evaluatePhosphorusStatus('STAGE_4', 6.1).isHigh).toBe(true)
+  })
+})
+
+describe('evaluateStageHint', () => {
+  it('does not suggest a review when values match the current stage', () => {
+    const result = evaluateStageHint('STAGE_2', { creatinine: 2.0, sdma: 20 })
+    expect(result.shouldSuggestReview).toBe(false)
+    expect(result.markers).toEqual([])
+  })
+
+  it('suggests a review when creatinine falls in a higher stage', () => {
+    const result = evaluateStageHint('STAGE_2', { creatinine: 3.2 })
+    expect(result).toEqual({
+      shouldSuggestReview: true,
+      suggestedStage: 'STAGE_3',
+      markers: ['creatinine']
+    })
+  })
+
+  it('uses the higher stage when creatinine and SDMA disagree', () => {
+    const result = evaluateStageHint('STAGE_2', { creatinine: 2.0, sdma: 30 })
+    expect(result).toEqual({
+      shouldSuggestReview: true,
+      suggestedStage: 'STAGE_3',
+      markers: ['sdma']
+    })
+  })
+
+  it('reports both markers when they agree on the higher stage', () => {
+    const result = evaluateStageHint('STAGE_2', { creatinine: 3.5, sdma: 30 })
+    expect(result.markers).toEqual(['creatinine', 'sdma'])
+  })
+
+  it('never suggests lowering the stage', () => {
+    expect(evaluateStageHint('STAGE_3', { creatinine: 1.2, sdma: 10 }).shouldSuggestReview).toBe(
+      false
+    )
+  })
+
+  it.each([
+    [1.5, 'STAGE_1'],
+    [1.6, 'STAGE_2'],
+    [2.8, 'STAGE_2'],
+    [2.85, 'STAGE_2'],
+    [2.9, 'STAGE_3'],
+    [5.0, 'STAGE_3'],
+    [5.1, 'STAGE_4']
+  ] as const)('maps creatinine %s mg/dL to %s', (creatinine, stage) => {
+    expect(evaluateStageHint('STAGE_1', { creatinine }).suggestedStage).toBe(stage)
+  })
+
+  it.each([
+    [17, 'STAGE_1'],
+    [18, 'STAGE_2'],
+    [25, 'STAGE_2'],
+    [25.5, 'STAGE_2'],
+    [26, 'STAGE_3'],
+    [38, 'STAGE_3'],
+    [39, 'STAGE_4']
+  ] as const)('maps SDMA %s µg/dL to %s', (sdma, stage) => {
+    expect(evaluateStageHint('STAGE_1', { creatinine: 1.0, sdma }).suggestedStage).toBe(stage)
   })
 })
 
