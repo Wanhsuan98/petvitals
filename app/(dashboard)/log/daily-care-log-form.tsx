@@ -8,6 +8,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 
 import { NumberField } from '@/components/number-field'
+import { OfflineNotice } from '@/components/offline-notice'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -19,6 +20,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { checkFluidOverPrescribed } from '@/lib/clinical'
+import { withNetworkErrorFallback } from '@/lib/network-error'
 import { DailyCareLogSchema, type DailyCareLog } from '@/lib/schemas'
 import { toLocalDateString } from '@/lib/utils'
 
@@ -52,6 +54,10 @@ const DEFAULT_VALUES: DailyCareLogFormInput = {
   notes: ''
 }
 
+// 包在模組層級，避免每次 render 都產生新的 action 函式
+const createWithFallback = withNetworkErrorFallback(createDailyCareLogAction)
+const updateWithFallback = withNetworkErrorFallback(updateDailyCareLogAction)
+
 const INITIAL_CREATE_STATE: CreateDailyCareLogState = { status: 'idle' }
 const INITIAL_UPDATE_STATE: UpdateDailyCareLogState = { status: 'idle' }
 
@@ -78,11 +84,11 @@ export function DailyCareLogForm({
 }) {
   const router = useRouter()
   const [createState, createAction, isCreating] = useActionState(
-    createDailyCareLogAction,
+    createWithFallback,
     INITIAL_CREATE_STATE
   )
   const [updateState, updateAction, isUpdating] = useActionState(
-    updateDailyCareLogAction,
+    updateWithFallback,
     INITIAL_UPDATE_STATE
   )
   const dailyCareLogId = dailyCareLog?.id
@@ -133,6 +139,7 @@ export function DailyCareLogForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+      <OfflineNotice />
       <NumberField
         id="subQFluidMl"
         label="皮下輸液量 (ml)"

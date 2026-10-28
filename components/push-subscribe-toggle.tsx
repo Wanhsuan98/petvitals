@@ -25,6 +25,57 @@ async function removeSubscription(subscription: PushSubscription): Promise<void>
   if (!response.ok) console.error('[push] 伺服器端刪除訂閱失敗，等待推播時自動清理')
 }
 
+type TestPushResult = {
+  deviceCount: number
+  deliveredCount: number
+  failedCount: number
+  expiredCount: number
+}
+
+function describeTestResult(result: TestPushResult): string {
+  if (result.deliveredCount === 0) {
+    return '測試通知沒有送出成功，請關閉推播後再重新開啟一次'
+  }
+  return `已送出測試通知到 ${result.deliveredCount} 個裝置。如果幾秒內沒有跳出通知，請檢查系統設定裡 PetVitals 的通知權限與專注模式`
+}
+
+// 傳送測試通知：伺服器只能確認推播服務收下了，手機有沒有真的跳出通知只有使用者看得到
+function TestPushButton() {
+  const [isSending, setIsSending] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  async function handleSendTest() {
+    setIsSending(true)
+    setMessage(null)
+    try {
+      if (!navigator.onLine) {
+        setMessage('目前沒有網路連線，請連線後再試')
+        return
+      }
+      const response = await fetch('/api/push/test', { method: 'POST' })
+      if (!response.ok) throw new Error('測試通知請求失敗')
+      setMessage(describeTestResult((await response.json()) as TestPushResult))
+    } catch {
+      setMessage('傳送測試通知失敗，請稍後再試')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  return (
+    <div className="space-y-1">
+      <Button variant="ghost" size="sm" disabled={isSending} onClick={handleSendTest}>
+        {isSending ? '傳送中…' : '傳送測試通知'}
+      </Button>
+      {message && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {message}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function PushSubscribeToggle() {
   const [support, setSupport] = useState<SupportStatus>('checking')
   const [isSubscribed, setIsSubscribed] = useState(false)
@@ -246,6 +297,7 @@ export function PushSubscribeToggle() {
       >
         {isPending ? '處理中…' : isSubscribed ? '關閉這個裝置的推播' : '開啟這個裝置的推播'}
       </Button>
+      {isSubscribed && permission === 'granted' && !isPending && <TestPushButton />}
     </div>
   )
 }

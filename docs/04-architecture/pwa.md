@@ -14,7 +14,7 @@ Introduced: v1.0.0
 ## 離線行為邊界
 
 - ✅ 支援：離線瀏覽先前快取過的頁面（歷史資料、圖表）。
-- ❌ 不支援：離線打卡寫入。這是刻意的範疇邊界，不是遺漏——背景同步佇列（Background Sync／IndexedDB）複雜度較高，排入 [../00-product/roadmap.md](../00-product/roadmap.md)，目前不實作。
+- ❌ 不支援：離線打卡寫入。離線時打卡、血檢的新增與編輯表單上方會顯示「目前沒有網路連線」提示；送出時若離線會直接擋下（不送請求），連線中途斷掉造成的 Server Action 失敗也會轉成表單上的錯誤訊息，不會整頁跳到錯誤畫面、也不會清掉剛填的內容（`lib/network-error.ts` 的 `withNetworkErrorFallback`）。刪除確認同樣有離線檢查。`navigator.onLine` 只代表有連上網路、不保證連得到伺服器，所以兩層都需要。這是刻意的範疇邊界，不是遺漏——背景同步佇列（Background Sync／IndexedDB）複雜度較高，排入 [../00-product/roadmap.md](../00-product/roadmap.md)，目前不實作。
 
 ## 離線快取與個資（v1.2）
 
