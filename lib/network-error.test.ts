@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { NETWORK_ERROR_MESSAGE, OFFLINE_MESSAGE, withNetworkErrorFallback } from './network-error'
+import {
+  OFFLINE_MESSAGE,
+  UNCERTAIN_RESULT_MESSAGE,
+  withNetworkErrorFallback
+} from './network-error'
 
 type State = { status: 'idle' | 'error' | 'success'; message?: string }
 const idle: State = { status: 'idle' }
@@ -34,7 +38,7 @@ describe('withNetworkErrorFallback', () => {
     expect(action).not.toHaveBeenCalled()
   })
 
-  it('turns a network rejection into a form error instead of crashing the page', async () => {
+  it('turns a rejection into a form error that does not claim the data was not saved', async () => {
     setOnline(true)
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const action = vi.fn(async (): Promise<State> => {
@@ -42,8 +46,9 @@ describe('withNetworkErrorFallback', () => {
     })
     await expect(withNetworkErrorFallback(action)(idle, 'input')).resolves.toEqual({
       status: 'error',
-      message: NETWORK_ERROR_MESSAGE
+      message: UNCERTAIN_RESULT_MESSAGE
     })
+    expect(UNCERTAIN_RESULT_MESSAGE).not.toContain('尚未儲存')
   })
 
   it('keeps server-side validation errors as they are', async () => {

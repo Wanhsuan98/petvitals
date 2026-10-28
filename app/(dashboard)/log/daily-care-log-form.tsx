@@ -149,11 +149,10 @@ export function DailyCareLogForm({
         registerOptions={{ valueAsNumber: true }}
         error={errors.subQFluidMl}
       />
-      {fluidCheck?.isOverPrescribed && (
-        <p role="status" className="-mt-2 text-xs font-medium text-accent-text">
-          {fluidCheck.message}
-        </p>
-      )}
+      {/* live region 要一直存在、只切換內文，螢幕閱讀器才會唸出新出現的提示 */}
+      <p role="status" className="-mt-2 text-xs font-medium text-accent-text empty:hidden">
+        {fluidCheck?.isOverPrescribed ? fluidCheck.message : ''}
+      </p>
 
       <NumberField
         id="waterIntakeMl"

@@ -3,14 +3,29 @@ import { redirect } from 'next/navigation'
 
 import { PageHeader } from '@/components/page-header'
 import { PendingInvitationsSection } from '@/components/pending-invitations-section'
+import { PushDeliveryLog } from '@/components/push-delivery-log'
 import { PushSubscribeToggle } from '@/components/push-subscribe-toggle'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getCatProfile } from '@/lib/data/cat-profile'
 import { listPendingInvitationsForUser } from '@/lib/data/pet-caregivers'
+import { listRecentDeliveriesForUser, type PushDelivery } from '@/lib/data/push-deliveries'
 import { createClient } from '@/lib/supabase/server'
 
 import { RefreshNotificationsButton } from './refresh-notifications-button'
+
+// 推播紀錄只是排查用的輔助資訊：讀取失敗時顯示空清單，不能讓邀請與推播開關跟著整頁壞掉
+async function getRecentDeliveries(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<PushDelivery[] | null> {
+  try {
+    return await listRecentDeliveriesForUser(supabase, userId)
+  } catch (error) {
+    console.error('讀取推播紀錄失敗', error)
+    return null
+  }
+}
 
 export default async function NotificationsPage() {
   const supabase = await createClient()
@@ -19,9 +34,10 @@ export default async function NotificationsPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [invitations, catProfile] = await Promise.all([
+  const [invitations, catProfile, deliveries] = await Promise.all([
     listPendingInvitationsForUser(supabase, user.id),
-    getCatProfile(supabase, user.id)
+    getCatProfile(supabase, user.id),
+    getRecentDeliveries(supabase, user.id)
   ])
 
   return (
@@ -41,6 +57,23 @@ export default async function NotificationsPage() {
           <p className="text-xs text-muted-foreground">
             推播開關僅適用於這個裝置；通知能否送達仍受網路與系統設定影響。
           </p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>最近推播紀錄</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            你帳號下所有裝置最近 10 筆推播（保留 30 天），用來確認提醒有沒有送到手機。
+          </p>
+          {deliveries ? (
+            <PushDeliveryLog deliveries={deliveries} />
+          ) : (
+            <p role="alert" className="text-sm text-destructive">
+              暫時無法讀取推播紀錄，請稍後重新整理。
+            </p>
+          )}
         </CardContent>
       </Card>
       <Card>

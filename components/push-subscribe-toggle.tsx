@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -36,13 +37,15 @@ function describeTestResult(result: TestPushResult): string {
   if (result.deliveredCount === 0) {
     return '測試通知沒有送出成功，請關閉推播後再重新開啟一次'
   }
-  return `已送出測試通知到 ${result.deliveredCount} 個裝置。如果幾秒內沒有跳出通知，請檢查系統設定裡 PetVitals 的通知權限與專注模式`
+  return `推播服務已收下 ${result.deliveredCount} 個裝置的測試通知。幾秒後按「重新整理」，通知中心的「最近推播紀錄」會顯示手機是否回報收到`
 }
 
 // 傳送測試通知：伺服器只能確認推播服務收下了，手機有沒有真的跳出通知只有使用者看得到
 function TestPushButton() {
   const [isSending, setIsSending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+
+  const router = useRouter()
 
   async function handleSendTest() {
     setIsSending(true)
@@ -55,6 +58,8 @@ function TestPushButton() {
       const response = await fetch('/api/push/test', { method: 'POST' })
       if (!response.ok) throw new Error('測試通知請求失敗')
       setMessage(describeTestResult((await response.json()) as TestPushResult))
+      // 讓通知中心的推播紀錄顯示剛才這筆；手機的「已收到」回報會晚幾秒才到
+      router.refresh()
     } catch {
       setMessage('傳送測試通知失敗，請稍後再試')
     } finally {

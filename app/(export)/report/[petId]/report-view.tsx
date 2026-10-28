@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useMemo, type ReactNode } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -44,6 +44,7 @@ export function ReportView({
   dailyCareLogs: DailyCareLog[]
   bloodTests: BloodTest[]
 }) {
+  const router = useRouter()
   const sortedBloodTests = useMemo(
     () => [...bloodTests].sort((a, b) => a.testDate.localeCompare(b.testDate)),
     [bloodTests]
@@ -77,13 +78,18 @@ export function ReportView({
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-6 print:max-w-none print:p-0">
       <div className="flex items-center justify-between gap-3 print:hidden">
-        {/* PWA 以 standalone 開啟時沒有瀏覽器返回鍵，報告頁又不在底部 Tab 版面內 */}
-        <Link
-          href="/records"
+        {/* PWA 以 standalone 開啟時沒有瀏覽器返回鍵，報告頁又不在底部 Tab 版面內。
+            從首頁或紀錄頁進來都回到原本的頁面；直接開網址（沒有上一頁）才回紀錄頁 */}
+        <button
+          type="button"
+          onClick={() => {
+            if (window.history.length > 1) router.back()
+            else router.push('/records')
+          }}
           className="text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
           ← 返回
-        </Link>
+        </button>
         <h1 className="text-lg font-semibold">回診摘要報告預覽</h1>
         <Button onClick={() => window.print()}>列印 / 匯出 PDF</Button>
       </div>

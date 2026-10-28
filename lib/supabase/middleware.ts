@@ -10,7 +10,9 @@ function isPublicPath(pathname: string): boolean {
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith('/auth/') ||
     // cron-job.org 排程打這個 endpoint 時沒有使用者 session，安全性由 CRON_SECRET 驗證把關
-    pathname === '/api/cron/send-reminders'
+    pathname === '/api/cron/send-reminders' ||
+    // 手機的 Service Worker 在背景回報「收到推播」時 session 可能已過期，以 deliveryId 驗證
+    pathname === '/api/push/ack'
   )
 }
 

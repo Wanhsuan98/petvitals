@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { NETWORK_DELETE_ERROR_MESSAGE, OFFLINE_DELETE_MESSAGE } from '@/lib/network-error'
+import { OFFLINE_DELETE_MESSAGE, UNCERTAIN_DELETE_MESSAGE } from '@/lib/network-error'
 
 type DeleteResult = { status: 'idle' | 'error' | 'success'; message?: string }
 
@@ -39,7 +39,7 @@ export function ConfirmDeleteButton({
         result = await onDelete()
       } catch (error) {
         console.error('[network] 刪除失敗', error)
-        result = { status: 'error', message: NETWORK_DELETE_ERROR_MESSAGE }
+        result = { status: 'error', message: UNCERTAIN_DELETE_MESSAGE }
       }
       if (result.status === 'error') {
         setErrorMessage(result.message ?? '刪除失敗，請稍後再試')
