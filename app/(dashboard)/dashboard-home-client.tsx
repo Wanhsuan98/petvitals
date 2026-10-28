@@ -64,7 +64,10 @@ export function DashboardHomeClient({
     () => calculateDailyProgress(todayLogs, catProfile),
     [todayLogs, catProfile]
   )
-  const weightAlert = useMemo(() => checkWeightLossAlert(dailyCareLogs), [dailyCareLogs])
+  const weightAlert = useMemo(
+    () => checkWeightLossAlert(dailyCareLogs, todayDate),
+    [dailyCareLogs, todayDate]
+  )
 
   // 跟 calculateDailyProgress 算百分比用的是同一組原始數值，這裡只是額外算出來顯示
   // 「80% · 120/150ml」這種含實際毫升數的格式，不值得為了這個display-only的需求

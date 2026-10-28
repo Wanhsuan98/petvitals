@@ -45,6 +45,8 @@ export async function listBloodTests(
     .select('*')
     .eq('pet_id', petId)
     .order('test_date', { ascending: false })
+    // 同一天有多筆時以後建立的為準，跟 compareBloodTestsChronologically 的排序一致
+    .order('created_at', { ascending: false })
 
   if (error) throw new Error(`讀取血檢紀錄失敗：${error.message}`)
   return (data as BloodTestRow[]).map(toBloodTest)

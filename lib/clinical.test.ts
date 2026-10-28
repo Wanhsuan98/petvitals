@@ -1,14 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import {
   calculateDailyProgress,
   checkFluidOverPrescribed,
   checkWeightLossAlert,
+  compareBloodTestsChronologically,
   evaluatePhosphorusStatus,
   evaluateStageHint,
   groupDailyCareLogsByDate
 } from './clinical'
-import type { DailyCareLog } from './schemas'
+import type { BloodTest, DailyCareLog } from './schemas'
 
 function makeLog(overrides: Partial<DailyCareLog> = {}): DailyCareLog {
   return {
@@ -25,20 +26,13 @@ function makeLog(overrides: Partial<DailyCareLog> = {}): DailyCareLog {
 }
 
 describe('checkWeightLossAlert', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-01-20T12:00:00.000Z'))
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
+  const today = '2026-01-20'
 
   it('does not alert with fewer than two weighted logs in the window', () => {
     const logs = [
       makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.5 })
     ]
-    expect(checkWeightLossAlert(logs).isAlert).toBe(false)
+    expect(checkWeightLossAlert(logs, today).isAlert).toBe(false)
   })
 
   it('alerts when weight drops 3% or more from the window high', () => {
@@ -46,7 +40,7 @@ describe('checkWeightLossAlert', () => {
       makeLog({ date: '2026-01-14', recordedAt: '2026-01-14T08:00:00.000Z', weightKg: 5.0 }),
       makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.8 })
     ]
-    const result = checkWeightLossAlert(logs)
+    const result = checkWeightLossAlert(logs, today)
     expect(result.isAlert).toBe(true)
     expect(result.dropRate).toBe(4.0)
   })
@@ -56,7 +50,7 @@ describe('checkWeightLossAlert', () => {
       makeLog({ date: '2026-01-14', recordedAt: '2026-01-14T08:00:00.000Z', weightKg: 5.0 }),
       makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.9 })
     ]
-    expect(checkWeightLossAlert(logs).isAlert).toBe(false)
+    expect(checkWeightLossAlert(logs, today).isAlert).toBe(false)
   })
 
   it('ignores logs outside the window', () => {
@@ -65,7 +59,7 @@ describe('checkWeightLossAlert', () => {
       makeLog({ date: '2026-01-05', recordedAt: '2026-01-05T08:00:00.000Z', weightKg: 10.0 }),
       makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.9 })
     ]
-    expect(checkWeightLossAlert(logs).isAlert).toBe(false)
+    expect(checkWeightLossAlert(logs, today).isAlert).toBe(false)
   })
 
   it('uses the latest weight of the day, not the earliest, when weighed twice', () => {
@@ -75,7 +69,7 @@ describe('checkWeightLossAlert', () => {
       makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 5.0 }),
       makeLog({ date: '2026-01-15', recordedAt: '2026-01-15T08:00:00.000Z', weightKg: 5.0 })
     ]
-    const result = checkWeightLossAlert(logs)
+    const result = checkWeightLossAlert(logs, today)
     expect(result.isAlert).toBe(true)
     expect(result.dropRate).toBe(4.0)
   })
@@ -86,7 +80,7 @@ describe('checkWeightLossAlert', () => {
       makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.8 }),
       makeLog({ date: '2026-01-15', recordedAt: '2026-01-15T08:00:00.000Z', weightKg: 5.0 })
     ]
-    expect(checkWeightLossAlert(logs).isAlert).toBe(false)
+    expect(checkWeightLossAlert(logs, today).isAlert).toBe(false)
   })
 
   it('counts exactly 7 calendar days including today', () => {
@@ -94,13 +88,13 @@ describe('checkWeightLossAlert', () => {
       makeLog({ date: '2026-01-13', recordedAt: '2026-01-13T08:00:00.000Z', weightKg: 6.0 }),
       makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.9 })
     ]
-    expect(checkWeightLossAlert(withEighthDay).isAlert).toBe(false)
+    expect(checkWeightLossAlert(withEighthDay, today).isAlert).toBe(false)
 
     const withSeventhDay = [
       makeLog({ date: '2026-01-14', recordedAt: '2026-01-14T08:00:00.000Z', weightKg: 6.0 }),
       makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.9 })
     ]
-    expect(checkWeightLossAlert(withSeventhDay).isAlert).toBe(true)
+    expect(checkWeightLossAlert(withSeventhDay, today).isAlert).toBe(true)
   })
 
   it('ignores logs without a recorded weight', () => {
@@ -108,7 +102,75 @@ describe('checkWeightLossAlert', () => {
       makeLog({ date: '2026-01-14', recordedAt: '2026-01-14T08:00:00.000Z', weightKg: undefined }),
       makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.9 })
     ]
-    expect(checkWeightLossAlert(logs).isAlert).toBe(false)
+    expect(checkWeightLossAlert(logs, today).isAlert).toBe(false)
+  })
+
+  it('recomputes the window from the date the caller passes, e.g. after midnight', () => {
+    const logs = [
+      makeLog({ date: '2026-01-14', recordedAt: '2026-01-14T08:00:00.000Z', weightKg: 6.0 }),
+      makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.9 })
+    ]
+    expect(checkWeightLossAlert(logs, '2026-01-20').isAlert).toBe(true)
+    // 跨過午夜到 1/21，1/14 那筆掉出 7 天窗口
+    expect(checkWeightLossAlert(logs, '2026-01-21').isAlert).toBe(false)
+  })
+
+  it('does not alert before the local date is known (SSR)', () => {
+    const logs = [
+      makeLog({ date: '2026-01-14', recordedAt: '2026-01-14T08:00:00.000Z', weightKg: 6.0 }),
+      makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.9 })
+    ]
+    expect(checkWeightLossAlert(logs, '')).toEqual({ isAlert: false, dropRate: 0 })
+  })
+})
+
+describe('compareBloodTestsChronologically', () => {
+  function makeBloodTest(overrides: Partial<BloodTest>): BloodTest {
+    return {
+      petId: '00000000-0000-4000-8000-000000000002',
+      testDate: '2026-01-15',
+      bun: 30,
+      creatinine: 2.0,
+      phosphorus: 4.0,
+      ...overrides
+    }
+  }
+
+  it('uses the later-created test as the newest when two share a date', () => {
+    const morning = makeBloodTest({
+      id: 'a',
+      createdAt: '2026-01-15T01:00:00.000Z',
+      creatinine: 2.0
+    })
+    const evening = makeBloodTest({
+      id: 'b',
+      createdAt: '2026-01-15T10:00:00.000Z',
+      creatinine: 3.2
+    })
+    for (const input of [
+      [morning, evening],
+      [evening, morning]
+    ]) {
+      const sorted = [...input].sort(compareBloodTestsChronologically)
+      expect(sorted.map((test) => test.id)).toEqual(['a', 'b'])
+    }
+  })
+
+  it('orders by test date before creation time', () => {
+    const older = makeBloodTest({
+      id: 'old',
+      testDate: '2026-01-10',
+      createdAt: '2026-01-20T00:00:00.000Z'
+    })
+    const newer = makeBloodTest({
+      id: 'new',
+      testDate: '2026-01-15',
+      createdAt: '2026-01-15T00:00:00.000Z'
+    })
+    expect([newer, older].sort(compareBloodTestsChronologically).map((test) => test.id)).toEqual([
+      'old',
+      'new'
+    ])
   })
 })
 

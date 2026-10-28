@@ -12,6 +12,7 @@ Tests: `lib/clinical.test.ts`
 ## Current Rule
 
 - Window：7 天（預設，可傳參數覆寫），**含今天共 7 個日曆日**（v1.2 修正：原本的下限多算了一天，實際是 8 天）
+- 「今天」由呼叫端傳入裝置本地日期（`checkWeightLossAlert(logs, today)`），不在函式內讀系統時間：App 開著跨過午夜時，首頁、紀錄頁、報告頁會隨日期變動重算；伺服器渲染時還沒有本地日期，傳入空字串，不判定警報（v1.2 修正：原本只依賴 logs 重算，跨午夜不更新，SSR 也會用伺服器的 UTC 時鐘）。
 - Baseline：視窗內最高體重
 - Alert threshold：下降 >= 3%
 

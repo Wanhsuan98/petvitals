@@ -19,11 +19,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   checkWeightLossAlert,
+  compareBloodTestsChronologically,
   evaluatePhosphorusStatus,
   evaluateStageHint,
   groupDailyCareLogsByDate
 } from '@/lib/clinical'
 import type { BloodTest, CatProfile, DailyCareLog } from '@/lib/schemas'
+import { useLocalTime } from '@/lib/use-local-time'
+import { toLocalDateString } from '@/lib/utils'
 
 import { deleteBloodTestAction } from './actions'
 
@@ -114,10 +117,15 @@ export function RecordsClient({
   dailyCareLogs: DailyCareLog[]
   bloodTests: BloodTest[]
 }) {
-  const weightAlert = useMemo(() => checkWeightLossAlert(dailyCareLogs), [dailyCareLogs])
+  const localTime = useLocalTime()
+  const todayDate = localTime === null ? '' : toLocalDateString(new Date(localTime))
+  const weightAlert = useMemo(
+    () => checkWeightLossAlert(dailyCareLogs, todayDate),
+    [dailyCareLogs, todayDate]
+  )
   const dailyPoints = useMemo(() => groupDailyCareLogsByDate(dailyCareLogs), [dailyCareLogs])
   const sortedBloodTests = useMemo(
-    () => [...bloodTests].sort((a, b) => a.testDate.localeCompare(b.testDate)),
+    () => [...bloodTests].sort(compareBloodTestsChronologically),
     [bloodTests]
   )
   const bloodTestsNewestFirst = useMemo(() => [...sortedBloodTests].reverse(), [sortedBloodTests])

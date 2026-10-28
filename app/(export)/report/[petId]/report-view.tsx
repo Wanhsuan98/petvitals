@@ -6,10 +6,12 @@ import { useMemo, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   checkWeightLossAlert,
+  compareBloodTestsChronologically,
   evaluatePhosphorusStatus,
   groupDailyCareLogsByDate
 } from '@/lib/clinical'
 import type { BloodTest, CatProfile, DailyCareLog } from '@/lib/schemas'
+import { useLocalTime } from '@/lib/use-local-time'
 import { toLocalDateString } from '@/lib/utils'
 
 const RECENT_CARE_WINDOW_DAYS = 14
@@ -46,15 +48,25 @@ export function ReportView({
 }) {
   const router = useRouter()
   const sortedBloodTests = useMemo(
-    () => [...bloodTests].sort((a, b) => a.testDate.localeCompare(b.testDate)),
+    () => [...bloodTests].sort(compareBloodTestsChronologically),
     [bloodTests]
   )
 
-  const weightAlert = useMemo(() => checkWeightLossAlert(dailyCareLogs), [dailyCareLogs])
+  // 本地日期只在瀏覽器取得（SSR 時為空字串），避免伺服器的 UTC 時鐘算出差一天的窗口與產出日期
+  const localTime = useLocalTime()
+  const todayDate = localTime === null ? '' : toLocalDateString(new Date(localTime))
+
+  const weightAlert = useMemo(
+    () => checkWeightLossAlert(dailyCareLogs, todayDate),
+    [dailyCareLogs, todayDate]
+  )
 
   const recentSummary = useMemo(() => {
-    const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - RECENT_CARE_WINDOW_DAYS)
+    // 還沒取得本地日期（SSR 與 hydration 首次渲染）時不算摘要，畫面顯示「載入中」而不是一排 0
+    if (!todayDate) return null
+    const cutoffDate = new Date(`${todayDate}T00:00:00`)
+    // 含今天共 RECENT_CARE_WINDOW_DAYS 個日曆日，跟體重警報的窗口算法一致
+    cutoffDate.setDate(cutoffDate.getDate() - (RECENT_CARE_WINDOW_DAYS - 1))
     const cutoff = toLocalDateString(cutoffDate)
 
     const points = groupDailyCareLogsByDate(dailyCareLogs).filter((point) => point.date >= cutoff)
@@ -68,7 +80,7 @@ export function ReportView({
       avgWaterMl: average(points.map((point) => point.totalWaterMl)),
       latestWeightKg: latestWeightPoint?.weightKg
     }
-  }, [dailyCareLogs])
+  }, [dailyCareLogs, todayDate])
 
   const latestBloodTest = sortedBloodTests[sortedBloodTests.length - 1]
   const latestPhosphorusStatus = latestBloodTest
@@ -103,7 +115,7 @@ export function ReportView({
               kg
             </p>
           </div>
-          <p className="text-xs text-muted-foreground">產出日期：{toLocalDateString(new Date())}</p>
+          <p className="text-xs text-muted-foreground">產出日期：{todayDate || '—'}</p>
         </header>
 
         {weightAlert.isAlert && (
@@ -118,17 +130,25 @@ export function ReportView({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <SummaryCard title="最新體重">
             <p className="text-lg font-semibold">
-              {typeof recentSummary.latestWeightKg === 'number'
-                ? `${recentSummary.latestWeightKg} kg`
-                : '尚無紀錄'}
+              {recentSummary === null
+                ? '載入中…'
+                : typeof recentSummary.latestWeightKg === 'number'
+                  ? `${recentSummary.latestWeightKg} kg`
+                  : '尚無紀錄'}
             </p>
           </SummaryCard>
 
           <SummaryCard
-            title={`近 ${RECENT_CARE_WINDOW_DAYS} 天平均每日照護量（依 ${recentSummary.daysRecorded}/${RECENT_CARE_WINDOW_DAYS} 天記錄計算）`}
+            title={
+              recentSummary === null
+                ? `近 ${RECENT_CARE_WINDOW_DAYS} 天平均每日照護量`
+                : `近 ${RECENT_CARE_WINDOW_DAYS} 天平均每日照護量（依 ${recentSummary.daysRecorded}/${RECENT_CARE_WINDOW_DAYS} 天記錄計算）`
+            }
           >
             <p className="text-sm">
-              輸液 {recentSummary.avgFluidMl} ml・飲水 {recentSummary.avgWaterMl} ml
+              {recentSummary === null
+                ? '載入中…'
+                : `輸液 ${recentSummary.avgFluidMl} ml・飲水 ${recentSummary.avgWaterMl} ml`}
             </p>
             <p className="text-xs text-muted-foreground">
               醫囑單次輸液 {catProfile.subQFluidPrescribedMl} ml，每日

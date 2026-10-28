@@ -25,7 +25,7 @@ Introduced: v1.2.0
 
 ## Validation
 
-- `invitedEmail`：合法 email 格式
+- `invitedEmail`：合法 email 格式（Zod `email()`）。資料庫另有寬鬆的 CHECK（要有 `@` 與網域、不含空白），只擋明顯不是 email 的值，完整格式仍以 Zod 為準
 
 ## Business Rules
 
