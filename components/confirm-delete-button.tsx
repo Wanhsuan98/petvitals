@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { OFFLINE_DELETE_MESSAGE, UNCERTAIN_DELETE_MESSAGE } from '@/lib/network-error'
 
 type DeleteResult = { status: 'idle' | 'error' | 'success'; message?: string }
 
@@ -27,8 +28,19 @@ export function ConfirmDeleteButton({
 
   function handleConfirm() {
     setErrorMessage(null)
+    if (!navigator.onLine) {
+      setErrorMessage(OFFLINE_DELETE_MESSAGE)
+      return
+    }
     startTransition(async () => {
-      const result = await onDelete()
+      // 網路中斷時 Server Action 會 reject，沒接住的話整頁會換成錯誤畫面
+      let result: DeleteResult
+      try {
+        result = await onDelete()
+      } catch (error) {
+        console.error('[network] 刪除失敗', error)
+        result = { status: 'error', message: UNCERTAIN_DELETE_MESSAGE }
+      }
       if (result.status === 'error') {
         setErrorMessage(result.message ?? '刪除失敗，請稍後再試')
         return

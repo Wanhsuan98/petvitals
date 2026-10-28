@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getCatProfile: vi.fn(),
   listInvitations: vi.fn(),
   acceptInvitation: vi.fn(),
+  listDeliveries: vi.fn(),
   hasAccessibleCat: vi.fn(),
   revalidatePath: vi.fn(),
   redirect: vi.fn((path: string): never => {
@@ -24,6 +25,9 @@ vi.mock('@/lib/data/pet-caregivers', () => ({
   listPendingInvitationsForUser: mocks.listInvitations,
   acceptCaregiverInvitation: mocks.acceptInvitation,
   hasAccessibleCat: mocks.hasAccessibleCat
+}))
+vi.mock('@/lib/data/push-deliveries', () => ({
+  listRecentDeliveriesForUser: mocks.listDeliveries
 }))
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }))
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }))
@@ -44,6 +48,7 @@ beforeEach(() => {
   mocks.getCatProfile.mockResolvedValue(null)
   mocks.listInvitations.mockResolvedValue([])
   mocks.hasAccessibleCat.mockResolvedValue(false)
+  mocks.listDeliveries.mockResolvedValue([])
 })
 
 describe('notification center', () => {
@@ -92,6 +97,20 @@ describe('notification center', () => {
     const html = renderToStaticMarkup(await NotificationsPage())
     expect(html).toContain('提醒由飼主設定')
     expect(html).toContain('href="/settings/reminders"')
+  })
+
+  it('shows the push delivery log empty state', async () => {
+    const html = renderToStaticMarkup(await NotificationsPage())
+    expect(html).toContain('最近推播紀錄')
+    expect(html).toContain('還沒有推播紀錄')
+  })
+
+  it('keeps the page usable when the delivery log cannot be read', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    mocks.listDeliveries.mockRejectedValue(new Error('offline'))
+    const html = renderToStaticMarkup(await NotificationsPage())
+    expect(html).toContain('暫時無法讀取推播紀錄')
+    expect(html).toContain('本裝置推播')
   })
 
   it('propagates query failures to the route error boundary', async () => {

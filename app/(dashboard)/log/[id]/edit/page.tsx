@@ -30,7 +30,10 @@ export default async function EditDailyCareLogPage({
           <p className="mb-4 text-xs text-muted-foreground">
             只能修改內容；打卡時間與所屬日期不會改變。
           </p>
-          <DailyCareLogForm dailyCareLog={dailyCareLog} />
+          <DailyCareLogForm
+            dailyCareLog={dailyCareLog}
+            prescribedSubQFluidMl={catProfile.subQFluidPrescribedMl}
+          />
         </CardContent>
       </Card>
     </div>

@@ -8,7 +8,7 @@ app/
 ├── (auth)/
 │   ├── login/page.tsx               # Magic Link / Google 登入
 │   └── layout.tsx
-├── (dashboard)/                     # PWA 應用核心，底部手機導航列 (Tab Bar: 首頁 / 打卡 / 報告 / 設定)
+├── (dashboard)/                     # PWA 應用核心，底部手機導航列 (Tab Bar: 首頁 / 打卡 / 紀錄 / 設定；回診報告入口在首頁卡片與紀錄頁右上角)
 │   ├── layout.tsx
 │   ├── page.tsx                     # 總覽首頁：今日輸液/飲水達成度 + 今日狀態卡 + 7天體重趨勢
 │   ├── loading.tsx                  # 首頁骨架畫面

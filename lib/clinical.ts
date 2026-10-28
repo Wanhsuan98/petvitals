@@ -2,13 +2,14 @@ import type { CatProfile, DailyCareLog } from '@/lib/schemas'
 import { toLocalDateString } from '@/lib/utils'
 
 // 1. 體重急遽下降警報（預設近 7 天內，窗口內最高點 vs 最新值下滑 >= 3%）
-// 日期窗口篩選在函式內處理，呼叫端可直接傳入完整歷史 logs，不需自行先過濾，避免隱性契約造成誤用
+// 日期窗口篩選在函式內處理，呼叫端可直接傳入完整歷史 logs，不需自行先過濾，避免隱性契約造成誤用。
+// 「近 7 天」含今天共 7 個日曆日，所以下限是今天往前推 windowDays - 1 天
 export function checkWeightLossAlert(
   logs: DailyCareLog[],
   windowDays: number = 7
 ): { isAlert: boolean; dropRate: number } {
   const cutoffDate = new Date()
-  cutoffDate.setDate(cutoffDate.getDate() - windowDays)
+  cutoffDate.setDate(cutoffDate.getDate() - (windowDays - 1))
   const cutoff = toLocalDateString(cutoffDate)
 
   const recent = logs
@@ -16,7 +17,9 @@ export function checkWeightLossAlert(
       (log): log is DailyCareLog & { weightKg: number } =>
         typeof log.weightKg === 'number' && log.date >= cutoff
     )
-    .sort((a, b) => a.date.localeCompare(b.date))
+    // 依精確打卡時間排序，不能只看 date：同一天量了兩次體重時，
+    // 只依 date 排序會讓「最新值」變成當天最早的那筆（輸入資料是由新到舊、排序又是穩定排序）
+    .sort((a, b) => a.recordedAt.localeCompare(b.recordedAt))
 
   if (recent.length < 2) return { isAlert: false, dropRate: 0 }
 
@@ -56,7 +59,7 @@ export function evaluatePhosphorusStatus(
     targetMax,
     message: isHigh
       ? `當前血磷 (${pValue} mg/dL) 已高於 IRIS ${stage} 期建議上限 (${targetMax} mg/dL)，請諮詢獸醫師是否調整降磷策略。（本標準依 IRIS 分期照護建議整理，僅供參考）`
-      : `血磷控制良好，符合 IRIS ${stage} 期目標 (< ${targetMax} mg/dL)。（本標準依 IRIS 分期照護建議整理，僅供參考）`
+      : `血磷控制良好，未超過 IRIS ${stage} 期建議上限 ${targetMax} mg/dL。（本標準依 IRIS 分期照護建議整理，僅供參考）`
   }
 }
 

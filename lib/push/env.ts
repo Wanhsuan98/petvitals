@@ -14,7 +14,7 @@ export function getPushEnv() {
   return { publicKey, privateKey, subject }
 }
 
-// GitHub Actions 排程打 api/cron/send-reminders 時帶的共用密鑰，
+// cron-job.org 排程打 api/cron/send-reminders 時帶的共用密鑰，
 // 因為這個 route 現在是公開可觸達的 URL（不像 Vercel Cron 有內建的呼叫端身分驗證）
 export function getCronSecret(): string {
   const secret = process.env.CRON_SECRET

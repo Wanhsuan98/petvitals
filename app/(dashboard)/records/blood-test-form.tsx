@@ -8,10 +8,12 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
 import { NumberField } from '@/components/number-field'
+import { OfflineNotice } from '@/components/offline-notice'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { withNetworkErrorFallback } from '@/lib/network-error'
 import { BloodTestSchema, type BloodTest } from '@/lib/schemas'
 import { toLocalDateString } from '@/lib/utils'
 
@@ -38,6 +40,10 @@ const DEFAULT_VALUES: BloodTestFormInput = {
   notes: ''
 }
 
+// 包在模組層級，避免每次 render 都產生新的 action 函式
+const createWithFallback = withNetworkErrorFallback(createBloodTestAction)
+const updateWithFallback = withNetworkErrorFallback(updateBloodTestAction)
+
 const INITIAL_CREATE_STATE: CreateBloodTestState = { status: 'idle' }
 const INITIAL_UPDATE_STATE: UpdateBloodTestState = { status: 'idle' }
 
@@ -59,11 +65,11 @@ function toDefaultValues(bloodTest: BloodTest | undefined): BloodTestFormInput {
 export function BloodTestForm({ bloodTest }: { bloodTest?: BloodTest }) {
   const router = useRouter()
   const [createState, createAction, isCreating] = useActionState(
-    createBloodTestAction,
+    createWithFallback,
     INITIAL_CREATE_STATE
   )
   const [updateState, updateAction, isUpdating] = useActionState(
-    updateBloodTestAction,
+    updateWithFallback,
     INITIAL_UPDATE_STATE
   )
   const bloodTestId = bloodTest?.id
@@ -103,6 +109,7 @@ export function BloodTestForm({ bloodTest }: { bloodTest?: BloodTest }) {
         </div>
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <OfflineNotice />
         <div className="space-y-1.5">
           <Label htmlFor="testDate">檢驗日期</Label>
           <Input

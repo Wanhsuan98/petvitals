@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,61 @@ async function removeSubscription(subscription: PushSubscription): Promise<void>
     body: JSON.stringify({ endpoint })
   })
   if (!response.ok) console.error('[push] 伺服器端刪除訂閱失敗，等待推播時自動清理')
+}
+
+type TestPushResult = {
+  deviceCount: number
+  deliveredCount: number
+  failedCount: number
+  expiredCount: number
+}
+
+function describeTestResult(result: TestPushResult): string {
+  if (result.deliveredCount === 0) {
+    return '測試通知沒有送出成功，請關閉推播後再重新開啟一次'
+  }
+  return `推播服務已收下 ${result.deliveredCount} 個裝置的測試通知。幾秒後按「重新整理」，通知中心的「最近推播紀錄」會顯示手機是否回報收到`
+}
+
+// 傳送測試通知：伺服器只能確認推播服務收下了，手機有沒有真的跳出通知只有使用者看得到
+function TestPushButton() {
+  const [isSending, setIsSending] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const router = useRouter()
+
+  async function handleSendTest() {
+    setIsSending(true)
+    setMessage(null)
+    try {
+      if (!navigator.onLine) {
+        setMessage('目前沒有網路連線，請連線後再試')
+        return
+      }
+      const response = await fetch('/api/push/test', { method: 'POST' })
+      if (!response.ok) throw new Error('測試通知請求失敗')
+      setMessage(describeTestResult((await response.json()) as TestPushResult))
+      // 讓通知中心的推播紀錄顯示剛才這筆；手機的「已收到」回報會晚幾秒才到
+      router.refresh()
+    } catch {
+      setMessage('傳送測試通知失敗，請稍後再試')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  return (
+    <div className="space-y-1">
+      <Button variant="ghost" size="sm" disabled={isSending} onClick={handleSendTest}>
+        {isSending ? '傳送中…' : '傳送測試通知'}
+      </Button>
+      {message && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {message}
+        </p>
+      )}
+    </div>
+  )
 }
 
 export function PushSubscribeToggle() {
@@ -246,6 +302,7 @@ export function PushSubscribeToggle() {
       >
         {isPending ? '處理中…' : isSubscribed ? '關閉這個裝置的推播' : '開啟這個裝置的推播'}
       </Button>
+      {isSubscribed && permission === 'granted' && !isPending && <TestPushButton />}
     </div>
   )
 }

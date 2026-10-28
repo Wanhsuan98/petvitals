@@ -15,7 +15,9 @@ self.addEventListener('activate', (event) => {
   )
 })
 
-// 主動提醒推播：payload 是 api/cron/send-reminders 送出的 JSON 字串 { title, body }
+// 主動提醒推播：payload 是 api/cron/send-reminders（或測試通知）送出的 JSON 字串
+// { title, body, deliveryId }。顯示通知之後回報伺服器「這台手機收到了」，
+// 通知中心的推播紀錄才能分辨「推播服務收下但手機沒收到」與「手機收到了但系統沒顯示」
 self.addEventListener('push', (event) => {
   if (!event.data) return
 
@@ -27,11 +29,21 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title ?? 'PetVitals', {
-      body: payload.body,
-      icon: '/icon.svg',
-      badge: '/icon.svg'
-    })
+    self.registration
+      .showNotification(payload.title ?? 'PetVitals', {
+        body: payload.body,
+        icon: '/icon.svg',
+        badge: '/icon.svg'
+      })
+      .then(() => {
+        if (!payload.deliveryId) return
+        // 回報失敗不影響通知顯示，只是紀錄上會停在「手機沒有回報收到」
+        return fetch('/api/push/ack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deliveryId: payload.deliveryId })
+        }).catch(() => undefined)
+      })
   )
 })
 

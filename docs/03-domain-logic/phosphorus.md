@@ -23,7 +23,7 @@ Tests: `lib/clinical.test.ts`
 ## Behavior
 
 - `pValue > targetMax` → `isHigh = true`，回傳建議諮詢獸醫師的訊息
-- 否則 → `isHigh = false`，回傳「控制良好」訊息
+- 否則 → `isHigh = false`，回傳「未超過建議上限」訊息（v1.2 修正：原本寫「< 上限」，血磷剛好等於上限時文字與數值矛盾）
 
 ## Important
 

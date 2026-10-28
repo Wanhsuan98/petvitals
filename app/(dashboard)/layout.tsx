@@ -6,11 +6,12 @@ import { ClipboardCheck, FileText, House, Settings } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
-// 底部手機導航列 (Tab Bar: 首頁 / 打卡 / 報告 / 設定)
+// 底部手機導航列 (Tab Bar: 首頁 / 打卡 / 紀錄 / 設定)。
+// 「紀錄」是血檢與趨勢圖頁；回診 A4 報告是另一個頁面，入口在首頁卡片與紀錄頁右上角
 const TABS = [
   { href: '/', label: '首頁', icon: House },
   { href: '/log', label: '打卡', icon: ClipboardCheck },
-  { href: '/records', label: '報告', icon: FileText },
+  { href: '/records', label: '紀錄', icon: FileText },
   { href: '/settings', label: '設定', icon: Settings }
 ] as const
 

@@ -83,7 +83,8 @@ export function DashboardHomeClient({
   const weightTrend = useMemo(() => {
     if (!todayDate) return []
     const cutoffDate = new Date(`${todayDate}T00:00:00`)
-    cutoffDate.setDate(cutoffDate.getDate() - WEIGHT_TREND_WINDOW_DAYS)
+    // 含今天共 WEIGHT_TREND_WINDOW_DAYS 個日曆日，跟體重警報的窗口一致
+    cutoffDate.setDate(cutoffDate.getDate() - (WEIGHT_TREND_WINDOW_DAYS - 1))
     const cutoff = toLocalDateString(cutoffDate)
 
     const byDate = new Map<string, number>()
@@ -139,7 +140,7 @@ export function DashboardHomeClient({
           description="保存重要數值"
         />
         <QuickActionCard
-          href="/records"
+          href={`/report/${catProfile.id}`}
           icon={FileText}
           tint="gold"
           title="回診摘要報告"

@@ -68,6 +68,41 @@ describe('checkWeightLossAlert', () => {
     expect(checkWeightLossAlert(logs).isAlert).toBe(false)
   })
 
+  it('uses the latest weight of the day, not the earliest, when weighed twice', () => {
+    // 輸入跟 listDailyCareLogs 一樣是由新到舊
+    const logs = [
+      makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T20:00:00.000Z', weightKg: 4.8 }),
+      makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 5.0 }),
+      makeLog({ date: '2026-01-15', recordedAt: '2026-01-15T08:00:00.000Z', weightKg: 5.0 })
+    ]
+    const result = checkWeightLossAlert(logs)
+    expect(result.isAlert).toBe(true)
+    expect(result.dropRate).toBe(4.0)
+  })
+
+  it('does not alert when the later weighing of the day recovered', () => {
+    const logs = [
+      makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T20:00:00.000Z', weightKg: 5.0 }),
+      makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.8 }),
+      makeLog({ date: '2026-01-15', recordedAt: '2026-01-15T08:00:00.000Z', weightKg: 5.0 })
+    ]
+    expect(checkWeightLossAlert(logs).isAlert).toBe(false)
+  })
+
+  it('counts exactly 7 calendar days including today', () => {
+    const withEighthDay = [
+      makeLog({ date: '2026-01-13', recordedAt: '2026-01-13T08:00:00.000Z', weightKg: 6.0 }),
+      makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.9 })
+    ]
+    expect(checkWeightLossAlert(withEighthDay).isAlert).toBe(false)
+
+    const withSeventhDay = [
+      makeLog({ date: '2026-01-14', recordedAt: '2026-01-14T08:00:00.000Z', weightKg: 6.0 }),
+      makeLog({ date: '2026-01-19', recordedAt: '2026-01-19T08:00:00.000Z', weightKg: 4.9 })
+    ]
+    expect(checkWeightLossAlert(withSeventhDay).isAlert).toBe(true)
+  })
+
   it('ignores logs without a recorded weight', () => {
     const logs = [
       makeLog({ date: '2026-01-14', recordedAt: '2026-01-14T08:00:00.000Z', weightKg: undefined }),
@@ -84,7 +119,11 @@ describe('evaluatePhosphorusStatus', () => {
   })
 
   it('treats the threshold value itself as within target', () => {
-    expect(evaluatePhosphorusStatus('STAGE_1', 4.5).isHigh).toBe(false)
+    const result = evaluatePhosphorusStatus('STAGE_1', 4.5)
+    expect(result.isHigh).toBe(false)
+    // 等於上限時文字不能寫「< 4.5」，否則跟數值自相矛盾
+    expect(result.message).toContain('未超過')
+    expect(result.message).not.toContain('<')
   })
 
   it('uses the higher STAGE_3/STAGE_4 thresholds', () => {

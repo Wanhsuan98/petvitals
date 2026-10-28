@@ -11,7 +11,7 @@ Tests: `lib/clinical.test.ts`
 
 ## Current Rule
 
-- Window：7 天（預設，可傳參數覆寫）
+- Window：7 天（預設，可傳參數覆寫），**含今天共 7 個日曆日**（v1.2 修正：原本的下限多算了一天，實際是 8 天）
 - Baseline：視窗內最高體重
 - Alert threshold：下降 >= 3%
 
@@ -25,6 +25,7 @@ dropRate = (maxWeight - latestWeight) / maxWeight × 100
 
 - 若 `dropRate >= 3` → `isAlert = true`
 - 否則 → `isAlert = false`
+- 「最新體重」依精確打卡時間 `recordedAt` 判斷（v1.2 修正：原本只依 `date` 排序，同一天量兩次體重時會誤取當天最早那筆）。
 - 視窗內少於 2 筆有效體重記錄時，不判定警報（`isAlert = false, dropRate = 0`）
 
 ## Important
