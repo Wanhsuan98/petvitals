@@ -1,14 +1,20 @@
-import type { CatProfile, DailyCareLog } from '@/lib/schemas'
+import type { BloodTest, CatProfile, DailyCareLog } from '@/lib/schemas'
 import { toLocalDateString } from '@/lib/utils'
 
 // 1. 體重急遽下降警報（預設近 7 天內，窗口內最高點 vs 最新值下滑 >= 3%）
 // 日期窗口篩選在函式內處理，呼叫端可直接傳入完整歷史 logs，不需自行先過濾，避免隱性契約造成誤用。
 // 「近 7 天」含今天共 7 個日曆日，所以下限是今天往前推 windowDays - 1 天
+// today 由呼叫端傳入裝置本地日期（YYYY-MM-DD），不在函式內讀 new Date()：
+// 這樣 App 開著跨過午夜時，呼叫端的 useMemo 會因為 today 改變而重算，
+// SSR 也不會拿伺服器的時鐘與時區（UTC）算出差一天的窗口。today 為空字串（尚未取得本地時間）時不判定
 export function checkWeightLossAlert(
   logs: DailyCareLog[],
+  today: string,
   windowDays: number = 7
 ): { isAlert: boolean; dropRate: number } {
-  const cutoffDate = new Date()
+  if (!today) return { isAlert: false, dropRate: 0 }
+
+  const cutoffDate = new Date(`${today}T00:00:00`)
   cutoffDate.setDate(cutoffDate.getDate() - (windowDays - 1))
   const cutoff = toLocalDateString(cutoffDate)
 
@@ -81,6 +87,15 @@ function stageFromSdma(sdma: number): CatProfile['irisStage'] {
   if (sdma < 26) return 'STAGE_2'
   if (sdma <= 38) return 'STAGE_3'
   return 'STAGE_4'
+}
+
+// 血檢由舊到新排序：先比檢驗日期，同一天再比建立時間。
+// 只比日期的話，同一天有兩筆血檢時誰算「最新一筆」是不確定的（取決於資料庫回傳順序），
+// 分期提示與報告的最新血磷就可能用錯筆；以後建立的那筆為準，符合「補登正確數值」的直覺
+export function compareBloodTestsChronologically(a: BloodTest, b: BloodTest): number {
+  return (
+    a.testDate.localeCompare(b.testDate) || (a.createdAt ?? '').localeCompare(b.createdAt ?? '')
+  )
 }
 
 export function evaluateStageHint(

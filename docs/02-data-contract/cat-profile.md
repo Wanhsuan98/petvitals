@@ -25,7 +25,7 @@ Introduced: v1.0.0
 ## Validation
 
 - `name`：1–20 字
-- `birthYear`：2000 到今年 + 1 之間的整數
+- `birthYear`：2000 到今年 + 1 之間的整數。Zod 在每次驗證時才計算「今年」（v1.2 前在模組載入時就固定，長時間執行的程序跨年後會擋掉新的上限）；資料庫也有相同的 CHECK，以台北時區計算年份
 - `targetWeightKg`：必須大於 0
 - `irisStage`：僅限四個 IRIS 分期字串
 - `dailyFluidTargetMl`：50–1000

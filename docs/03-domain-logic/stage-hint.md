@@ -27,7 +27,7 @@ Tests: `lib/clinical.test.ts`
 
 ## Behavior
 
-- 只比對血檢紀錄頁中**日期最新的一筆**，不看歷史。
+- 只比對血檢紀錄頁中**最新的一筆**，不看歷史。同一天有多筆時以後建立的那筆為準，見 [../02-data-contract/blood-test.md](../02-data-contract/blood-test.md)。
 - 顯示在 `/records` 頁面頂部，語氣為「可能需要和獸醫師確認」，不使用「診斷」「應該調整為」等措辭。
 - SDMA 為選填，未填時只比對肌酸酐。
 

@@ -14,11 +14,13 @@ export const CatProfileSchema = z.object({
   id: z.string().uuid(),
   ownerId: z.string().uuid(), // 綁定 Supabase auth.users.id，供 RLS 權限隔離使用
   name: z.string().min(1, '請輸入貓咪名字').max(20),
+  // 上限在每次驗證時才計算：寫成 .max(new Date().getFullYear() + 1) 的話，年份會在模組載入時
+  // 就固定下來，長時間執行的程序跨年後仍會擋掉新一年 +1 的出生年份
   birthYear: z
     .number()
     .int()
-    .min(2000)
-    .max(new Date().getFullYear() + 1),
+    .min(2000, '出生年份不能早於 2000 年')
+    .refine((year) => year <= new Date().getFullYear() + 1, '出生年份不能晚於明年'),
   targetWeightKg: z.number().positive('目標體重必須大於 0'),
   irisStage: z.enum(['STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4']).default('STAGE_2'), // 使用者依獸醫診斷結果手動設定，非系統自動判定
   dailyFluidTargetMl: z.number().min(50).max(1000).default(200), // 每日飲水目標（不含輸液）

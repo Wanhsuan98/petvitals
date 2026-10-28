@@ -37,7 +37,7 @@ exists (
 
 角色邊界：
 
-- **owner**：唯一能邀請或移除協作者、刪除貓咪檔案的角色。owner 的權限完全來自 `cat_profiles.owner_id`，`pet_caregivers` 表裡沒有 owner 自己的資料列。
+- **owner**：唯一能邀請或移除協作者的角色；資料庫權限上也只有 owner 能刪除貓咪檔案，但目前 App 沒有刪除貓咪的功能（刪除會連同協作者看得到的日誌、血檢一併 cascade 刪除且無法復原，要做需另外設計確認流程）。owner 的權限完全來自 `cat_profiles.owner_id`，`pet_caregivers` 表裡沒有 owner 自己的資料列。
 - **caregiver**：可讀寫 `daily_care_logs` / `blood_tests`，可讀（不能寫）`cat_profiles`，但不能寫入 `pet_caregivers`（只能把自己的邀請從 `PENDING` 改成 `ACCEPTED`，且有 trigger 擋下順便偷改 `pet_id`/`user_id` 的權限升級風險）。
 - 人數上限（`MAX_CAREGIVERS_PER_PET = 3`，owner 隱含算 1 人 + `pet_caregivers` 的 `ACCEPTED`/`PENDING` 筆數）**同時在應用層跟 DB 層檢查**。應用層（`countActiveCaregiverSeats`）只是先做一次友善的預先檢查；真正擋住併發邀請超過上限的是 `pet_caregivers` 的 `before insert` trigger（`enforce_caregiver_cap`），用 `pg_advisory_xact_lock` 把同一隻貓的併發新增序列化，避免兩個併發邀請都通過應用層檢查、都寫入成功（code review 抓到的 TOCTOU 競態條件，修正見 `20260922010000_enforce_caregiver_cap_in_db.sql`）。**這個上限數字目前在 `lib/schemas.ts` 的 `MAX_CAREGIVERS_PER_PET` 跟這個 trigger 裡各寫一份，Postgres 沒辦法直接引用 TypeScript 常數，之後調整上限要記得兩邊一起改。**
 

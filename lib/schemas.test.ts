@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { BloodTestSchema, CatProfileSchema, DailyCareLogSchema } from './schemas'
 
@@ -31,6 +31,17 @@ describe('CatProfileSchema', () => {
 
   it('rejects a birth year before 2000', () => {
     expect(CatProfileSchema.safeParse({ ...validInput, birthYear: 1999 }).success).toBe(false)
+  })
+
+  it('checks the upper bound against the current year at parse time, not module load', () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date(2030, 5, 1))
+      expect(CatProfileSchema.safeParse({ ...validInput, birthYear: 2031 }).success).toBe(true)
+      expect(CatProfileSchema.safeParse({ ...validInput, birthYear: 2032 }).success).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('rejects an iris stage outside the defined enum', () => {

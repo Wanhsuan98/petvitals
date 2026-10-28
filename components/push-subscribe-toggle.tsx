@@ -26,18 +26,21 @@ async function removeSubscription(subscription: PushSubscription): Promise<void>
   if (!response.ok) console.error('[push] 伺服器端刪除訂閱失敗，等待推播時自動清理')
 }
 
-type TestPushResult = {
+export type TestPushResult = {
   deviceCount: number
   deliveredCount: number
   failedCount: number
   expiredCount: number
 }
 
-function describeTestResult(result: TestPushResult): string {
+export function describeTestResult(result: TestPushResult): string {
   if (result.deliveredCount === 0) {
-    return '測試通知沒有送出成功，請關閉推播後再重新開啟一次'
+    return '測試通知沒有送出成功。請先關閉這個裝置的推播，再重新開啟一次'
   }
-  return `推播服務已收下 ${result.deliveredCount} 個裝置的測試通知。幾秒後按「重新整理」，通知中心的「最近推播紀錄」會顯示手機是否回報收到`
+  // 部分裝置失敗時也要說出來，不然使用者看到「已送出」會以為每台都沒問題
+  const notDeliveredCount = result.failedCount + result.expiredCount
+  const notDeliveredText = notDeliveredCount > 0 ? `，另有 ${notDeliveredCount} 台沒送出` : ''
+  return `已送出到 ${result.deliveredCount} 台裝置${notDeliveredText}。如果沒看到通知，幾秒後重新整理本頁，「最近推播紀錄」會顯示可能的原因`
 }
 
 // 傳送測試通知：伺服器只能確認推播服務收下了，手機有沒有真的跳出通知只有使用者看得到
@@ -72,6 +75,12 @@ function TestPushButton() {
       <Button variant="ghost" size="sm" disabled={isSending} onClick={handleSendTest}>
         {isSending ? '傳送中…' : '傳送測試通知'}
       </Button>
+      {/* 測試通知會送到帳號下所有裝置，不只這一台；按鈕放在「本裝置推播」卡片裡，不說清楚會被誤會。
+          「先回到主畫面」是因為 App 開在前景時系統不一定會跳出橫幅（實測離開 App 後會跳出） */}
+      <p className="text-xs text-muted-foreground">
+        會傳一則測試通知到你帳號下所有已開啟推播的裝置。按下後可以先回到主畫面，幾秒內應該會收到；如果沒收到，請到系統設定確認
+        PetVitals 允許通知，並檢查專注模式／勿擾模式。
+      </p>
       {message && (
         <p role="status" className="text-xs text-muted-foreground">
           {message}

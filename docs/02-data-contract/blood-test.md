@@ -36,6 +36,7 @@ Introduced: v1.0.0
 
 - 所有數值需以標示單位輸入（mg/dL、ug/dL、%）；若醫院報告使用其他單位制（例如 SI 制 umol/L），需自行換算後填入。目前不做單位偵測與自動換算，未來如需支援須在 schema 補充 `unit` 欄位。
 - 紀錄建立後可由飼主或協作者編輯、刪除；編輯不能更改 `petId`（不能把紀錄搬到另一隻貓）。
+- 「最新一筆血檢」先依 `testDate`、同一天再依 `createdAt` 判斷，以後建立的那筆為準（`compareBloodTestsChronologically()`；讀取時資料庫也用同樣的雙排序鍵）。v1.2 前只依日期排序，同一天兩筆時分期提示與報告用哪一筆不確定。
 - 血磷是否超標由 [Phosphorus Status](../03-domain-logic/phosphorus.md) 依 `CatProfile.irisStage` 計算，非本 schema 自帶邏輯。
 
 ## Related Domain Logic
