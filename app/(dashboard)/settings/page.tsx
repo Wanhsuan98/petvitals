@@ -2,14 +2,13 @@ import { Bell, ChevronRight, Users } from 'lucide-react'
 import Link from 'next/link'
 
 import { PendingInvitationsSection } from '@/components/pending-invitations-section'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getCatProfile } from '@/lib/data/cat-profile'
 import { listPendingInvitationsForUser } from '@/lib/data/pet-caregivers'
 import { createClient } from '@/lib/supabase/server'
 
-import { signOut } from './actions'
 import { CatProfileForm } from './cat-profile-form'
+import { SignOutButton } from './sign-out-button'
 
 // 貓咪基本資料、目標水量與醫囑設定
 export default async function SettingsPage() {
@@ -97,11 +96,14 @@ export default async function SettingsPage() {
             </p>
           )}
 
-          <form action={signOut}>
-            <Button type="submit" variant="outline">
-              登出
-            </Button>
-          </form>
+          <Link
+            href="/service#medical-disclaimer"
+            className="block text-sm text-muted-foreground underline underline-offset-4"
+          >
+            服務說明與醫療免責聲明
+          </Link>
+
+          <SignOutButton />
         </CardContent>
       </Card>
     </div>

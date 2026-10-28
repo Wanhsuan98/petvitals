@@ -144,7 +144,19 @@ export function RecordsClient({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">血檢紀錄</h1>
-        <Button size="sm" nativeButton={false} render={<Link href="/records/new">新增血檢</Link>} />
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href={`/report/${catProfile.id}`}>回診報告</Link>}
+          />
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/records/new">新增血檢</Link>}
+          />
+        </div>
       </div>
 
       {weightAlert.isAlert && (
@@ -275,6 +287,12 @@ export function RecordsClient({
           </div>
         )}
       </section>
+      <p className="text-xs text-muted-foreground">
+        警示與分期提示僅供參考，不構成醫療建議。
+        <Link href="/service#medical-disclaimer" className="underline underline-offset-4">
+          醫療免責聲明
+        </Link>
+      </p>
     </div>
   )
 }

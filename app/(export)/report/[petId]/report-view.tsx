@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, type ReactNode } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -75,7 +76,14 @@ export function ReportView({
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-6 print:max-w-none print:p-0">
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex items-center justify-between gap-3 print:hidden">
+        {/* PWA 以 standalone 開啟時沒有瀏覽器返回鍵，報告頁又不在底部 Tab 版面內 */}
+        <Link
+          href="/records"
+          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+        >
+          ← 返回
+        </Link>
         <h1 className="text-lg font-semibold">回診摘要報告預覽</h1>
         <Button onClick={() => window.print()}>列印 / 匯出 PDF</Button>
       </div>

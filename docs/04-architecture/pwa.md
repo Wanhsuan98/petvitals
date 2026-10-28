@@ -16,6 +16,13 @@ Introduced: v1.0.0
 - ✅ 支援：離線瀏覽先前快取過的頁面（歷史資料、圖表）。
 - ❌ 不支援：離線打卡寫入。這是刻意的範疇邊界，不是遺漏——背景同步佇列（Background Sync／IndexedDB）複雜度較高，排入 [../00-product/roadmap.md](../00-product/roadmap.md)，目前不實作。
 
-## 與主動提醒排程的關係（規劃中，v1.2）
+## 離線快取與個資（v1.2）
 
-Web Push 需要 Service Worker 註冊 `push` 事件監聽器，目前 `public/sw.js` 尚未實作這段。這是 [../01-requirements/notification.md](../01-requirements/notification.md) 動工時需要一併補上的部分，不是現有 Service Worker 就自動支援的能力。
+Service Worker 的快取不分使用者，裡面存著先前瀏覽過的頁面（含貓咪病歷）。為避免同一台裝置換人登入時讀到上一位使用者的資料，`lib/offline-cache.ts` 的 `clearOfflineCache()` 會刪除所有 `petvitals-` 開頭的快取，呼叫時機：
+
+- 設定頁按「登出」時，先清快取再登出。
+- 進入登入頁時再清一次（涵蓋登入過期、沒有按登出就被導回登入頁的情況）。
+
+## 與主動提醒排程的關係（v1.2）
+
+`public/sw.js` 已實作 `push`（顯示通知）與 `notificationclick`（優先聚焦已開啟的分頁）事件監聽，見 [../01-requirements/notification.md](../01-requirements/notification.md)。

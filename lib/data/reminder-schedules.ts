@@ -137,8 +137,8 @@ export async function listDueReminders(
     .filter((reminder): reminder is DueReminder => reminder !== null)
 }
 
-// 發送完成後記錄「今天已經發送過」，避免 GitHub Actions 排程的執行時間誤差
-// （延遲觸發、同一個 5 分鐘區間內不只跑一次）讓同一則提醒一天內重複推播
+// 至少一個裝置送達後記錄「今天已經發送過」：cron-job.org 在同一個 5 分鐘區間內會觸發約 5 次，
+// 不記錄的話同一則提醒會重複推播
 export async function markReminderSentToday(
   serviceRoleSupabase: SupabaseClient,
   id: string,

@@ -139,7 +139,7 @@ export function DashboardHomeClient({
           description="保存重要數值"
         />
         <QuickActionCard
-          href="/records"
+          href={`/report/${catProfile.id}`}
           icon={FileText}
           tint="gold"
           title="回診摘要報告"

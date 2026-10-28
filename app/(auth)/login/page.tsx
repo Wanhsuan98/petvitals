@@ -1,10 +1,12 @@
 'use client'
 
-import { useActionState } from 'react'
+import Link from 'next/link'
+import { useActionState, useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { clearOfflineCache } from '@/lib/offline-cache'
 
 import { signInWithGoogle, signInWithMagicLink, type MagicLinkState } from './actions'
 
@@ -12,6 +14,12 @@ const INITIAL_STATE: MagicLinkState = { status: 'idle' }
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(signInWithMagicLink, INITIAL_STATE)
+
+  // 登入過期被導回這裡時，上一位使用者沒有按登出，快取也就沒被清；
+  // 在登入頁再清一次，確保下一個登入的人不會讀到前一位的離線快取
+  useEffect(() => {
+    void clearOfflineCache()
+  }, [])
 
   return (
     <main className="w-full min-w-0 max-w-sm space-y-6">
@@ -64,6 +72,13 @@ export default function LoginPage() {
           使用 Google 帳號登入
         </Button>
       </form>
+
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        PetVitals 是居家照護紀錄的輔助工具，不提供獸醫診斷或醫療建議，病情與用藥請遵循獸醫師指示。
+        <Link href="/service#medical-disclaimer" className="underline underline-offset-4">
+          閱讀完整醫療免責聲明
+        </Link>
+      </p>
     </main>
   )
 }

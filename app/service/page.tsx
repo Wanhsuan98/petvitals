@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -8,7 +9,15 @@ export const metadata: Metadata = {
 export default function ServicePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-10 p-6 pb-16">
-      <header className="space-y-2 pt-8">
+      {/* PWA 以 standalone 開啟時沒有瀏覽器返回鍵，從 App 內連過來的使用者需要回去的路 */}
+      <Link
+        href="/"
+        className="inline-block pt-4 text-sm font-medium text-primary underline-offset-4 hover:underline"
+      >
+        ← 返回 PetVitals
+      </Link>
+
+      <header className="space-y-2">
         <p className="text-sm font-medium text-primary">PetVitals</p>
         <h1 className="text-2xl font-semibold">慢性腎病貓咪居家照護紀錄與回診報告工具</h1>
         <p className="text-sm text-muted-foreground">
@@ -51,7 +60,7 @@ export default function ServicePage() {
         </p>
       </section>
 
-      <section className="space-y-2 border-t pt-6">
+      <section id="medical-disclaimer" className="scroll-mt-6 space-y-2 border-t pt-6">
         <h2 className="text-lg font-semibold">醫療免責聲明</h2>
         <p className="text-xs text-muted-foreground">
           本系統（PetVitals）僅作為飼主居家健康數據記錄、歷史趨勢可視化與日常照護之輔助工具，不具備獸醫臨床診斷功能，

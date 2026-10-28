@@ -7,5 +7,10 @@ export default async function LogPage() {
   const { supabase, catProfile } = await requireCatProfile()
   const dailyCareLogs = await listDailyCareLogs(supabase, catProfile.id)
 
-  return <LogForm dailyCareLogs={dailyCareLogs} />
+  return (
+    <LogForm
+      dailyCareLogs={dailyCareLogs}
+      prescribedSubQFluidMl={catProfile.subQFluidPrescribedMl}
+    />
+  )
 }

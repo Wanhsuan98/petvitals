@@ -42,7 +42,13 @@ function DailyCareLogActions({ id, timeLabel }: { id: string; timeLabel: string 
   )
 }
 
-export function LogForm({ dailyCareLogs }: { dailyCareLogs: DailyCareLog[] }) {
+export function LogForm({
+  dailyCareLogs,
+  prescribedSubQFluidMl
+}: {
+  dailyCareLogs: DailyCareLog[]
+  prescribedSubQFluidMl: number
+}) {
   const localTime = useLocalTime()
   const todayDate = localTime === null ? '' : toLocalDateString(new Date(localTime))
   const todayLogs = useMemo(
@@ -60,7 +66,7 @@ export function LogForm({ dailyCareLogs }: { dailyCareLogs: DailyCareLog[] }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <DailyCareLogForm />
+          <DailyCareLogForm prescribedSubQFluidMl={prescribedSubQFluidMl} />
         </CardContent>
       </Card>
 

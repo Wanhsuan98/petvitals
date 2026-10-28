@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { CircleCheck } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { startTransition, useActionState, useEffect } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 
 import { NumberField } from '@/components/number-field'
@@ -18,6 +18,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { checkFluidOverPrescribed } from '@/lib/clinical'
 import { DailyCareLogSchema, type DailyCareLog } from '@/lib/schemas'
 import { toLocalDateString } from '@/lib/utils'
 
@@ -67,7 +68,14 @@ function toDefaultValues(dailyCareLog: DailyCareLog | undefined): DailyCareLogFo
 }
 
 // 新增與編輯共用同一份表單：傳入 dailyCareLog 就是編輯該筆紀錄（只能改內容，不能改打卡時間與日期）
-export function DailyCareLogForm({ dailyCareLog }: { dailyCareLog?: DailyCareLog }) {
+// prescribedSubQFluidMl 是醫囑單次輸液量：超過只提示、不擋存檔（防呆上限 600ml 由 schema 把關，兩者分開）
+export function DailyCareLogForm({
+  dailyCareLog,
+  prescribedSubQFluidMl
+}: {
+  dailyCareLog?: DailyCareLog
+  prescribedSubQFluidMl: number
+}) {
   const router = useRouter()
   const [createState, createAction, isCreating] = useActionState(
     createDailyCareLogAction,
@@ -92,6 +100,13 @@ export function DailyCareLogForm({ dailyCareLog }: { dailyCareLog?: DailyCareLog
     resolver: zodResolver(dailyCareLogFormSchema),
     defaultValues: toDefaultValues(dailyCareLog)
   })
+
+  const subQFluidMl = useWatch({ control, name: 'subQFluidMl' })
+  // 欄位清空時 valueAsNumber 會是 NaN，不提示；醫囑量設為 0（沒有開輸液）時任何輸液都會提示，這是預期行為
+  const fluidCheck =
+    typeof subQFluidMl === 'number' && Number.isFinite(subQFluidMl)
+      ? checkFluidOverPrescribed(subQFluidMl, prescribedSubQFluidMl)
+      : null
 
   // 依賴整個 state 物件而不是 state.status：連續兩次成功時 status 字串不變，
   // 只看 status 的話第二次不會重跑，表單會保留上一筆的數字
@@ -127,6 +142,11 @@ export function DailyCareLogForm({ dailyCareLog }: { dailyCareLog?: DailyCareLog
         registerOptions={{ valueAsNumber: true }}
         error={errors.subQFluidMl}
       />
+      {fluidCheck?.isOverPrescribed && (
+        <p role="status" className="-mt-2 text-xs font-medium text-accent-text">
+          {fluidCheck.message}
+        </p>
+      )}
 
       <NumberField
         id="waterIntakeMl"
