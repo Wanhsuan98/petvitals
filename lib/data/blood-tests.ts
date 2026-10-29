@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-import { BloodTestSchema, type BloodTest } from '@/lib/schemas'
+import { StoredBloodTestSchema, type BloodTest } from '@/lib/schemas'
 
 type BloodTestRow = {
   id: string
@@ -18,8 +18,9 @@ type BloodTestRow = {
 
 export type BloodTestInput = Omit<BloodTest, 'id' | 'createdAt'>
 
+// 讀取用寬鬆的 StoredBloodTestSchema：舊資料可能有 0，不能讓整頁跟著壞掉
 function toBloodTest(row: BloodTestRow): BloodTest {
-  return BloodTestSchema.parse({
+  return StoredBloodTestSchema.parse({
     id: row.id,
     petId: row.pet_id,
     testDate: row.test_date,

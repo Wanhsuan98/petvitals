@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Info, Save } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { startTransition, useActionState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, type DefaultValues } from 'react-hook-form'
 import { z } from 'zod'
 
 import { NumberField } from '@/components/number-field'
@@ -29,13 +29,14 @@ const bloodTestFormSchema = BloodTestSchema.omit({
 type BloodTestFormInput = z.input<typeof bloodTestFormSchema>
 type BloodTestFormOutput = z.output<typeof bloodTestFormSchema>
 
-const DEFAULT_VALUES: BloodTestFormInput = {
+// 必填數值預設為空白而不是 0：預設 0 時沒填就送出會存成 0，被判斷為「血磷正常」
+const DEFAULT_VALUES: DefaultValues<BloodTestFormInput> = {
   testDate: '',
   hospitalName: '',
-  bun: 0,
-  creatinine: 0,
+  bun: undefined,
+  creatinine: undefined,
   sdma: undefined,
-  phosphorus: 0,
+  phosphorus: undefined,
   hct: undefined,
   notes: ''
 }
@@ -47,7 +48,7 @@ const updateWithFallback = withNetworkErrorFallback(updateBloodTestAction)
 const INITIAL_CREATE_STATE: CreateBloodTestState = { status: 'idle' }
 const INITIAL_UPDATE_STATE: UpdateBloodTestState = { status: 'idle' }
 
-function toDefaultValues(bloodTest: BloodTest | undefined): BloodTestFormInput {
+function toDefaultValues(bloodTest: BloodTest | undefined): DefaultValues<BloodTestFormInput> {
   if (!bloodTest) return { ...DEFAULT_VALUES, testDate: toLocalDateString(new Date()) }
   return {
     testDate: bloodTest.testDate,
@@ -135,12 +136,14 @@ export function BloodTestForm({ bloodTest }: { bloodTest?: BloodTest }) {
           />
         </div>
 
+        {/* placeholder 只示範輸入格式，不放參考範圍：各醫院的參考範圍不同，
+            放了容易被當成「正常值」判讀，數值請以醫院報告為準 */}
         <div className="grid grid-cols-2 gap-3">
           <NumberField
             id="bun"
             label="BUN 尿素氮"
             unit="mg/dL"
-            placeholder="16-36"
+            placeholder="例：32.5"
             register={register}
             registerOptions={{ valueAsNumber: true }}
             error={errors.bun}
@@ -151,7 +154,7 @@ export function BloodTestForm({ bloodTest }: { bloodTest?: BloodTest }) {
             label="Creatinine 肌酸酐"
             step="0.1"
             unit="mg/dL"
-            placeholder="0.8-2.4"
+            placeholder="例：2.1"
             register={register}
             registerOptions={{ valueAsNumber: true }}
             error={errors.creatinine}
@@ -163,7 +166,7 @@ export function BloodTestForm({ bloodTest }: { bloodTest?: BloodTest }) {
             id="sdma"
             label="SDMA (選填)"
             unit="ug/dL"
-            placeholder="0-14"
+            placeholder="例：18"
             register={register}
             registerOptions={{
               setValueAs: (value) => (value === '' ? undefined : Number(value))
@@ -176,7 +179,7 @@ export function BloodTestForm({ bloodTest }: { bloodTest?: BloodTest }) {
             label="Phosphorus 血磷"
             step="0.1"
             unit="mg/dL"
-            placeholder="2.5-6.8"
+            placeholder="例：4.6"
             register={register}
             registerOptions={{ valueAsNumber: true }}
             error={errors.phosphorus}
@@ -187,7 +190,7 @@ export function BloodTestForm({ bloodTest }: { bloodTest?: BloodTest }) {
           id="hct"
           label="HCT 紅血球容積比 (選填，貧血評估)"
           unit="%"
-          placeholder="30-45"
+          placeholder="例：35"
           register={register}
           registerOptions={{
             setValueAs: (value) => (value === '' ? undefined : Number(value))

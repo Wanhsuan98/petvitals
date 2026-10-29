@@ -25,18 +25,19 @@ Introduced: v1.0.0
 
 ## Validation
 
-- `bun`：0–300
-- `creatinine`：0–30
-- `sdma`：0–100（optional）
-- `phosphorus`：0–30
-- `hct`：0–70（optional）
+- `bun`：大於 0，最多 300
+- `creatinine`：大於 0，最多 30
+- `sdma`：大於 0，最多 100（optional）
+- `phosphorus`：大於 0，最多 30
+- `hct`：大於 0，最多 70（optional）
 - `testDate`：格式須為 `YYYY-MM-DD`，且必須是實際存在的日期
 
-### 數值必須大於 0（Planned）
+### 數值必須大於 0（v1.2 修正）
 
 - `bun`、`creatinine`、`phosphorus` 改為大於 0（上限不變）；`sdma`、`hct` 有填時也必須大於 0。這些指標在活體上不可能為 0，0 幾乎一定是「沒填」或輸入錯誤，而 0 會被血磷判斷為「正常」，造成錯誤的臨床提示。
-- Zod 與資料庫 CHECK 一起改。新增表單這三個必填欄位預設為空白，不再預設 0。
-- **套用 migration 前要先處理既有的 0 值資料**，否則加上 CHECK 會失敗。2026-10-29 唯讀查詢時，正式資料庫有 1 筆（BUN 0、血磷 0），需由使用者編輯成正確數值或刪除。
+- Zod 與資料庫 CHECK 一起改（`20261030000000_require_positive_blood_test_values.sql`）。新增表單這三個必填欄位預設為空白，不再預設 0。
+- **寫入與讀取用不同的 schema**：新增、編輯用嚴格的 `BloodTestSchema`；從資料庫讀取用 `StoredBloodTestSchema`，仍接受 0。讀取若也用嚴格規則，既有的 0 值紀錄會讓紀錄頁、報告、甚至該筆的編輯頁都拋錯，使用者就無法在 App 裡把它改正。
+- **套用 migration 前要先處理既有的 0 值資料**，否則加上 CHECK 會失敗；migration 開頭會先檢查，有 0 值資料時以清楚的訊息中止。2026-10-29 唯讀查詢時，正式資料庫有 1 筆（BUN 0、血磷 0），需由使用者編輯成正確數值或刪除。
 
 ## Business Rules
 
