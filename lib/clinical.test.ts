@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  addSevenDayFluidAverage,
   calculateDailyProgress,
   checkFluidOverPrescribed,
   checkWeightLossAlert,
   compareBloodTestsChronologically,
   evaluatePhosphorusStatus,
   evaluateStageHint,
-  groupDailyCareLogsByDate
+  groupDailyCareLogsByDate,
+  groupDailyPointsByWeek,
+  type DailyCareSummaryPoint
 } from './clinical'
 import type { BloodTest, DailyCareLog } from './schemas'
 
@@ -362,5 +365,60 @@ describe('groupDailyCareLogsByDate', () => {
       '2026-01-16',
       '2026-01-17'
     ])
+  })
+})
+
+function makePoint(date: string, totalFluidMl: number, weightKg?: number): DailyCareSummaryPoint {
+  return { date, weightKg, totalFluidMl, totalWaterMl: 0 }
+}
+
+describe('addSevenDayFluidAverage', () => {
+  it('averages the recorded days within the 7 calendar days ending on each date', () => {
+    const result = addSevenDayFluidAverage([
+      makePoint('2026-10-01', 100),
+      makePoint('2026-10-02', 120),
+      makePoint('2026-10-07', 80),
+      // 10/08 的窗口是 10/02–10/08，10/01 已經掉出去
+      makePoint('2026-10-08', 100)
+    ])
+    expect(result.map((point) => point.fluidAvgMl)).toEqual([100, 110, 100, 100])
+  })
+
+  it('does not count days without records as 0', () => {
+    // 7 天內只有兩天有紀錄：平均是 (100 + 120) / 2，不是 / 7
+    const result = addSevenDayFluidAverage([
+      makePoint('2026-10-01', 100),
+      makePoint('2026-10-05', 120)
+    ])
+    expect(result[1].fluidAvgMl).toBe(110)
+  })
+
+  it('keeps the daily weight as-is', () => {
+    const result = addSevenDayFluidAverage([makePoint('2026-10-01', 100, 4.2)])
+    expect(result[0]).toEqual({ date: '2026-10-01', weightKg: 4.2, fluidAvgMl: 100 })
+  })
+})
+
+describe('groupDailyPointsByWeek', () => {
+  it('groups by Monday-start weeks with the last weight and the average daily fluid', () => {
+    const result = groupDailyPointsByWeek([
+      // 2026-10-05 是週一，10-11 是週日，屬於同一週
+      makePoint('2026-10-05', 100, 4.3),
+      makePoint('2026-10-08', 120, 4.2),
+      makePoint('2026-10-11', 80),
+      makePoint('2026-10-12', 100, 4.1)
+    ])
+    expect(result).toEqual([
+      { date: '2026-10-05', weightKg: 4.2, fluidAvgMl: 100 },
+      { date: '2026-10-12', weightKg: 4.1, fluidAvgMl: 100 }
+    ])
+  })
+
+  it('skips weeks without any records', () => {
+    const result = groupDailyPointsByWeek([
+      makePoint('2026-10-05', 100),
+      makePoint('2026-10-26', 100)
+    ])
+    expect(result.map((point) => point.date)).toEqual(['2026-10-05', '2026-10-26'])
   })
 })

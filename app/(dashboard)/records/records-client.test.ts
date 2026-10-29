@@ -99,6 +99,12 @@ describe('records period filter', () => {
     expect(html).toContain('查看全部紀錄')
   })
 
+  it('gives every chart an accessible name', () => {
+    const html = render(recentTests)
+    expect(html).toContain('aria-label="肌酸酐趨勢圖')
+    expect(html).toContain('aria-label="血磷趨勢圖，虛線為目前分期建議上限 4.5 mg/dL')
+  })
+
   it('keeps the stage hint on the newest test even when it is outside the period', () => {
     mocks.range = '3m'
     const html = render([makeBloodTest(1, '2026-03-01', 3.5)])

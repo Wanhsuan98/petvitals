@@ -1,29 +1,21 @@
 'use client'
 
-import {
-  CategoryScale,
-  Chart as ChartJS,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Tooltip
-} from 'chart.js'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
-import { Line } from 'react-chartjs-2'
 
 import { ConfirmDeleteButton } from '@/components/confirm-delete-button'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
+  addSevenDayFluidAverage,
   checkWeightLossAlert,
   compareBloodTestsChronologically,
   evaluatePhosphorusStatus,
   evaluateStageHint,
-  groupDailyCareLogsByDate
+  groupDailyCareLogsByDate,
+  groupDailyPointsByWeek
 } from '@/lib/clinical'
 import {
   getPeriodStartDate,
@@ -38,6 +30,7 @@ import { useLocalTime } from '@/lib/use-local-time'
 import { toLocalDateString } from '@/lib/utils'
 
 import { deleteBloodTestAction } from './actions'
+import { KidneyMarkersChart, PhosphorusChart, WeightFluidChart } from './trend-charts'
 
 function formatStageNumber(stage: CatProfile['irisStage']): string {
   return `第 ${stage.replace('STAGE_', '')} 期`
@@ -102,59 +95,6 @@ function BloodTestActions({
   )
 }
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
-
-type DualAxisDataset = {
-  label: string
-  data: (number | null)[]
-  yAxisID: 'y' | 'y1'
-  color: string
-}
-
-type DualAxisLineChartProps = {
-  labels: string[]
-  datasets: DualAxisDataset[]
-  leftAxisLabel: string
-  rightAxisLabel: string
-}
-
-function DualAxisLineChart({
-  labels,
-  datasets,
-  leftAxisLabel,
-  rightAxisLabel
-}: DualAxisLineChartProps) {
-  return (
-    <Line
-      role="img"
-      aria-label={`${leftAxisLabel} 與 ${rightAxisLabel} 趨勢圖，詳細數值請參考下方清單`}
-      data={{
-        labels,
-        datasets: datasets.map((dataset) => ({
-          label: dataset.label,
-          data: dataset.data,
-          yAxisID: dataset.yAxisID,
-          borderColor: dataset.color,
-          backgroundColor: dataset.color,
-          spanGaps: true
-        }))
-      }}
-      options={{
-        responsive: true,
-        scales: {
-          y: { type: 'linear', position: 'left', title: { display: true, text: leftAxisLabel } },
-          y1: {
-            type: 'linear',
-            position: 'right',
-            title: { display: true, text: rightAxisLabel },
-            grid: { drawOnChartArea: false }
-          }
-        }
-      }}
-    />
-  )
-}
-
 export function RecordsClient({
   catProfile,
   dailyCareLogs,
@@ -202,10 +142,19 @@ export function RecordsClient({
   const bloodTestsNewestFirst = useMemo(() => [...sortedBloodTests].reverse(), [sortedBloodTests])
 
   // 圖表與清單用篩選後的資料；分期提示與體重警報仍用全部資料（見下方與 ADR-009）
-  const periodDailyPoints = useMemo(
-    () => dailyPoints.filter((point) => isOnOrAfter(point.date, periodStart)),
-    [dailyPoints, periodStart]
-  )
+  // 近 3／6 個月每天一個點（輸液畫 7 天平均），近 1 年／全部改成每週一個點。
+  // 7 天平均要先用全部資料算再篩選，區間開頭幾天才不會只平均到區間內的資料
+  const isWeeklyTrend = period === '1y' || period === 'all'
+  const weightFluidTrend = useMemo(() => {
+    if (isWeeklyTrend) {
+      return groupDailyPointsByWeek(
+        dailyPoints.filter((point) => isOnOrAfter(point.date, periodStart))
+      )
+    }
+    return addSevenDayFluidAverage(dailyPoints).filter((point) =>
+      isOnOrAfter(point.date, periodStart)
+    )
+  }, [dailyPoints, periodStart, isWeeklyTrend])
   const periodBloodTests = useMemo(
     () => sortedBloodTests.filter((test) => isOnOrAfter(test.testDate, periodStart)),
     [sortedBloodTests, periodStart]
@@ -276,26 +225,8 @@ export function RecordsClient({
           <CardTitle>體重 vs 輸液量</CardTitle>
         </CardHeader>
         <CardContent>
-          {periodDailyPoints.length > 0 ? (
-            <DualAxisLineChart
-              labels={periodDailyPoints.map((point) => point.date)}
-              leftAxisLabel="kg"
-              rightAxisLabel="ml"
-              datasets={[
-                {
-                  label: '體重 (kg)',
-                  data: periodDailyPoints.map((point) => point.weightKg ?? null),
-                  yAxisID: 'y',
-                  color: '#557a63'
-                },
-                {
-                  label: '每日輸液量 (ml)',
-                  data: periodDailyPoints.map((point) => point.totalFluidMl),
-                  yAxisID: 'y1',
-                  color: '#c98255'
-                }
-              ]}
-            />
+          {weightFluidTrend.length > 0 ? (
+            <WeightFluidChart points={weightFluidTrend} isWeekly={isWeeklyTrend} />
           ) : dailyPoints.length > 0 ? (
             <p className="text-sm text-muted-foreground">這段期間沒有照護紀錄。</p>
           ) : (
@@ -308,35 +239,40 @@ export function RecordsClient({
 
       <Card>
         <CardHeader>
-          <CardTitle>BUN / Creatinine vs 血磷</CardTitle>
+          <CardTitle>腎指標</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
           {periodBloodTests.length > 0 ? (
-            <DualAxisLineChart
-              labels={periodBloodTests.map((test) => test.testDate)}
-              leftAxisLabel="BUN / Creatinine (mg/dL)"
-              rightAxisLabel="血磷 (mg/dL)"
-              datasets={[
-                {
-                  label: 'BUN (mg/dL)',
-                  data: periodBloodTests.map((test) => test.bun),
-                  yAxisID: 'y',
-                  color: '#557a63'
-                },
-                {
-                  label: 'Creatinine (mg/dL)',
-                  data: periodBloodTests.map((test) => test.creatinine),
-                  yAxisID: 'y',
-                  color: '#c98255'
-                },
-                {
-                  label: '血磷 Phosphorus (mg/dL)',
-                  data: periodBloodTests.map((test) => test.phosphorus),
-                  yAxisID: 'y1',
-                  color: '#d4a84f'
-                }
-              ]}
-            />
+            <>
+              <KidneyMarkersChart tests={periodBloodTests} />
+              <p className="text-xs text-muted-foreground">
+                背景色帶只對應左軸的肌酸酐（IRIS 2026
+                貓的分期區間），SDMA（虛線）的分期切點不同，請勿對照色帶判讀。區間僅供參考，分期需由獸醫師判斷；BUN
+                請見下方清單。
+              </p>
+            </>
+          ) : sortedBloodTests.length > 0 ? (
+            <p className="text-sm text-muted-foreground">這段期間沒有血檢紀錄。</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              尚無血檢紀錄，點右上角「新增血檢」開始記錄。
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>血磷</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {periodBloodTests.length > 0 ? (
+            <>
+              <PhosphorusChart tests={periodBloodTests} irisStage={catProfile.irisStage} />
+              <p className="text-xs text-muted-foreground">
+                {`紅色虛線：目前設定的${formatStageNumber(catProfile.irisStage)}血磷建議上限 ${evaluatePhosphorusStatus(catProfile.irisStage, 0).targetMax} mg/dL。較早的檢驗若在不同分期時做的，虛線不代表當時的目標。`}
+              </p>
+            </>
           ) : sortedBloodTests.length > 0 ? (
             <p className="text-sm text-muted-foreground">這段期間沒有血檢紀錄。</p>
           ) : (

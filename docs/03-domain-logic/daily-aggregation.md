@@ -2,7 +2,8 @@
 
 Status: Implemented
 Introduced: v1.0.0
-Implementation: `groupDailyCareLogsByDate()` in `lib/clinical.ts`
+Implementation: `groupDailyCareLogsByDate()`、`addSevenDayFluidAverage()`、`groupDailyPointsByWeek()` in `lib/clinical.ts`
+Tests: `lib/clinical.test.ts`
 
 > 這份文件不在原始 v1.0/v1.1 Spec 裡，是補寫的——程式碼裡已經實作但當時的文件沒有涵蓋到，趁這次拆分文件一併補上，避免「文件沒寫的邏輯」被忽略。
 
@@ -33,9 +34,10 @@ type DailyCareSummaryPoint = {
 
 體重採「當天最後一筆」而非平均或加總，因為體重是狀態量（同一時刻只有一個真實值），加總或平均沒有臨床意義；輸液/飲水量是流量，加總才有意義。
 
-## 週彙總與 7 天平均（Planned）
+## 週彙總與 7 天平均
 
-Status: Planned
+Status: Implemented
+Introduced: v1.2.0
 
 供紀錄頁「體重 vs 輸液量」圖在不同時間篩選下使用（見 [../01-requirements/dashboard.md](../01-requirements/dashboard.md)），都以上面的每日資料點為輸入：
 
