@@ -2,7 +2,8 @@
 
 Status: Implemented
 Introduced: v1.0.0
-Implementation: `groupDailyCareLogsByDate()` in `lib/clinical.ts`
+Implementation: `groupDailyCareLogsByDate()`、`addSevenDayFluidAverage()`、`groupDailyPointsByWeek()` in `lib/clinical.ts`
+Tests: `lib/clinical.test.ts`
 
 > 這份文件不在原始 v1.0/v1.1 Spec 裡，是補寫的——程式碼裡已經實作但當時的文件沒有涵蓋到，趁這次拆分文件一併補上，避免「文件沒寫的邏輯」被忽略。
 
@@ -32,6 +33,19 @@ type DailyCareSummaryPoint = {
 ## Important
 
 體重採「當天最後一筆」而非平均或加總，因為體重是狀態量（同一時刻只有一個真實值），加總或平均沒有臨床意義；輸液/飲水量是流量，加總才有意義。
+
+## 週彙總與 7 天平均
+
+Status: Implemented
+Introduced: v1.2.0
+
+供紀錄頁「體重 vs 輸液量」圖在不同時間篩選下使用（見 [../01-requirements/dashboard.md](../01-requirements/dashboard.md)），都以上面的每日資料點為輸入：
+
+- **輸液 7 天平均**（近 3／6 個月）：每個日期取「含當天往前 7 個日曆日內、有紀錄的日子」的每日總輸液量平均。**沒有紀錄的日子不算成 0**：沒打卡代表沒記錄，不代表沒輸液，算成 0 會把平均拉低、誤導成輸液不足。7 天內都沒有紀錄時該點為空。
+- **週彙總**（近 1 年／全部）：以週一為一週的開始分組，每週一個點，日期標在該週週一。
+  - 體重：該週最後一筆有值的體重，理由同上方 Important（體重是狀態量，不平均）。
+  - 輸液量：該週有紀錄日子的每日總量平均，同樣不把沒紀錄的日子算成 0。
+  - 該週完全沒有紀錄時不產生資料點。
 
 ## Related Data Contract
 

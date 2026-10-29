@@ -66,13 +66,39 @@ export const BloodTestSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式必須為 YYYY-MM-DD')
     .refine(isValidCalendarDate, '請輸入實際存在的日期'),
   hospitalName: z.string().max(30).optional(),
-  bun: z.number().min(0).max(300, '數值超出檢驗合理範圍').describe('尿素氮 (mg/dL)'),
-  creatinine: z.number().min(0).max(30, '數值超出檢驗合理範圍').describe('肌酸酐 (mg/dL)'),
-  sdma: z.number().min(0).max(100).optional().describe('早期腎指標 (ug/dL)'),
-  phosphorus: z.number().min(0).max(30, '數值超出檢驗合理範圍').describe('血磷 (mg/dL)'),
-  hct: z.number().min(0).max(70).optional().describe('紅血球容積比 (%)'),
+  // 這些指標在活體上不可能為 0：0 幾乎一定是「沒填」或輸入錯誤，而且會被血磷判斷為「正常」，
+  // 所以下限是「大於 0」。表單欄位空白時 valueAsNumber 會得到 NaN，由 error 給出「請輸入」的訊息
+  bun: z
+    .number({ error: '請輸入 BUN' })
+    .positive('BUN 必須大於 0')
+    .max(300, '數值超出檢驗合理範圍')
+    .describe('尿素氮 (mg/dL)'),
+  creatinine: z
+    .number({ error: '請輸入肌酸酐' })
+    .positive('肌酸酐必須大於 0')
+    .max(30, '數值超出檢驗合理範圍')
+    .describe('肌酸酐 (mg/dL)'),
+  sdma: z.number().positive('SDMA 必須大於 0').max(100).optional().describe('早期腎指標 (ug/dL)'),
+  phosphorus: z
+    .number({ error: '請輸入血磷' })
+    .positive('血磷必須大於 0')
+    .max(30, '數值超出檢驗合理範圍')
+    .describe('血磷 (mg/dL)'),
+  hct: z.number().positive('HCT 必須大於 0').max(70).optional().describe('紅血球容積比 (%)'),
   notes: z.string().max(100).optional(),
   createdAt: z.string().datetime().optional()
+})
+
+// 讀取資料庫既有紀錄用：v1.2 前允許存入 0（新增表單曾預設為 0），這些舊資料在使用者修正、
+// 或 migration 20261030000000 套用之前仍可能存在。讀取時若沿用「必須大於 0」的規則會直接拋錯，
+// 紀錄頁、報告、甚至該筆的編輯頁都打不開，使用者就沒辦法在 App 裡把它改正。
+// 寫入（新增、編輯）一律用上面嚴格的 BloodTestSchema
+export const StoredBloodTestSchema = BloodTestSchema.extend({
+  bun: z.number().min(0).max(300),
+  creatinine: z.number().min(0).max(30),
+  sdma: z.number().min(0).max(100).optional(),
+  phosphorus: z.number().min(0).max(30),
+  hct: z.number().min(0).max(70).optional()
 })
 
 // ==========================================

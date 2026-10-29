@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { BloodTestSchema, CatProfileSchema, DailyCareLogSchema } from './schemas'
+import {
+  BloodTestSchema,
+  CatProfileSchema,
+  DailyCareLogSchema,
+  StoredBloodTestSchema
+} from './schemas'
 
 const VALID_UUID = '00000000-0000-4000-8000-000000000001'
 
@@ -123,6 +128,25 @@ describe('BloodTestSchema', () => {
     expect(BloodTestSchema.safeParse({ ...validInput, bun: 301 }).success).toBe(false)
     expect(BloodTestSchema.safeParse({ ...validInput, creatinine: 31 }).success).toBe(false)
     expect(BloodTestSchema.safeParse({ ...validInput, phosphorus: -1 }).success).toBe(false)
+  })
+
+  it.each(['bun', 'creatinine', 'phosphorus', 'sdma', 'hct'])(
+    'rejects %s = 0, which almost always means the field was left blank',
+    (field) => {
+      expect(BloodTestSchema.safeParse({ ...validInput, [field]: 0 }).success).toBe(false)
+    }
+  )
+
+  it('asks for the value when a required field is blank (NaN from the number input)', () => {
+    const result = BloodTestSchema.safeParse({ ...validInput, phosphorus: Number.NaN })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.message).toBe('請輸入血磷')
+  })
+
+  it('still reads legacy records stored with 0 so the user can open and fix them', () => {
+    const legacy = { ...validInput, bun: 0, phosphorus: 0 }
+    expect(StoredBloodTestSchema.safeParse(legacy).success).toBe(true)
+    expect(StoredBloodTestSchema.safeParse({ ...validInput, bun: -1 }).success).toBe(false)
   })
 
   it('treats sdma and hct as optional', () => {

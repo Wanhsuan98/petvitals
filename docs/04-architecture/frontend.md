@@ -41,6 +41,8 @@ app/
         └── send-reminders/route.ts  # cron-job.org 排程觸發，掃描到期提醒並發送 Web Push
 ```
 
+> 紀錄頁時間篩選（[ADR-009](../05-decisions/ADR-009-records-period-filter-and-charts.md)）：篩選狀態放在 `/records?range=` 網址參數，`RecordsClient` 用 `useSearchParams` 讀取、`window.history.replaceState` 切換（Next.js 會同步到 `useSearchParams`，不觸發伺服器請求）；篩選與彙總在 client 端對已取得的資料計算，不另外發查詢。區間計算在 `lib/records-period.ts`。新增與編輯頁從 `?range=` 取回篩選，只接受合法值後再組回紀錄頁網址。趨勢圖在 `records/trend-charts.tsx`，時間軸使用 `chartjs-adapter-date-fns` 與 `date-fns`（皆為 MIT 授權的開源套件，非中國來源）。
+
 > `(dashboard)/` 下每個分頁路由都是各自獨立的 Server Component，每次切換分頁都會即時對 Supabase 發查詢；為了避免切換時畫面空白卡頓，每個分頁都補上對應內容形狀的 `loading.tsx` 骨架畫面（v1.2）。
 
 ## 通知中心（v1.2）

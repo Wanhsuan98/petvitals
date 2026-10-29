@@ -1,3 +1,5 @@
+import { format, parseISO, startOfISOWeek, subDays } from 'date-fns'
+
 import type { BloodTest, CatProfile, DailyCareLog } from '@/lib/schemas'
 import { toLocalDateString } from '@/lib/utils'
 
@@ -188,4 +190,57 @@ export function groupDailyCareLogsByDate(logs: DailyCareLog[]): DailyCareSummary
   }
 
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
+}
+
+// 紀錄頁「體重 vs 輸液量」圖用的資料點（見 docs/03-domain-logic/daily-aggregation.md）
+export type WeightFluidTrendPoint = {
+  date: string
+  weightKg: number | undefined
+  // 有紀錄日子的每日總輸液量平均；沒有可平均的日子時為 undefined（圖上斷開，不畫成 0）
+  fluidAvgMl: number | undefined
+}
+
+function averageOf(values: number[]): number | undefined {
+  if (values.length === 0) return undefined
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+}
+
+// 6. 輸液 7 天平均：每個日期取「含當天往前 7 個日曆日內、有紀錄的日子」的每日總輸液量平均。
+// 沒有紀錄的日子不算成 0：沒打卡代表沒記錄，不代表沒輸液，算成 0 會把平均拉低、誤導成輸液不足。
+// points 須為 groupDailyCareLogsByDate 的輸出（依日期升冪、一天一個點）
+export function addSevenDayFluidAverage(points: DailyCareSummaryPoint[]): WeightFluidTrendPoint[] {
+  let windowStartIndex = 0
+  return points.map((point, index) => {
+    const windowStart = format(subDays(parseISO(point.date), 6), 'yyyy-MM-dd')
+    while (points[windowStartIndex].date < windowStart) windowStartIndex += 1
+    const windowPoints = points.slice(windowStartIndex, index + 1)
+    return {
+      date: point.date,
+      weightKg: point.weightKg,
+      fluidAvgMl: averageOf(windowPoints.map((windowPoint) => windowPoint.totalFluidMl))
+    }
+  })
+}
+
+// 7. 週彙總：以週一為一週的開始，每週一個點、日期標在該週週一。
+// 體重取該週最後一筆有值的體重（狀態量不平均，理由同 groupDailyCareLogsByDate）；
+// 輸液量取該週有紀錄日子的每日總量平均；完全沒有紀錄的週不產生資料點
+export function groupDailyPointsByWeek(points: DailyCareSummaryPoint[]): WeightFluidTrendPoint[] {
+  const byWeek = new Map<string, { weightKg: number | undefined; dailyFluidMl: number[] }>()
+
+  for (const point of points) {
+    const weekStart = format(startOfISOWeek(parseISO(point.date)), 'yyyy-MM-dd')
+    const week = byWeek.get(weekStart) ?? { weightKg: undefined, dailyFluidMl: [] }
+    if (typeof point.weightKg === 'number') week.weightKg = point.weightKg
+    week.dailyFluidMl.push(point.totalFluidMl)
+    byWeek.set(weekStart, week)
+  }
+
+  return [...byWeek.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([weekStart, week]) => ({
+      date: weekStart,
+      weightKg: week.weightKg,
+      fluidAvgMl: averageOf(week.dailyFluidMl)
+    }))
 }

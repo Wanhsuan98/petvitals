@@ -13,3 +13,9 @@ export function toLocalDateString(d: Date): string {
   const day = String(d.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
+
+// Asia/Taipei 的 YYYY-MM-DD。MVP 只支援台北單一時區：伺服器（Vercel 為 UTC）需要「今天」時用這個，
+// 例如 cron 判斷提醒日期、紀錄頁在還沒取得裝置本地日期前的篩選基準
+export function toTaipeiDateString(date: Date): string {
+  return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
+}
