@@ -62,8 +62,15 @@ function toDefaultValues(bloodTest: BloodTest | undefined): DefaultValues<BloodT
   }
 }
 
-// 新增與編輯共用同一份表單：傳入 bloodTest 就是編輯該筆紀錄
-export function BloodTestForm({ bloodTest }: { bloodTest?: BloodTest }) {
+// 新增與編輯共用同一份表單：傳入 bloodTest 就是編輯該筆紀錄。
+// returnHref 是儲存成功後回到的紀錄頁網址（編輯時帶著原本的時間篩選）
+export function BloodTestForm({
+  bloodTest,
+  returnHref = '/records'
+}: {
+  bloodTest?: BloodTest
+  returnHref?: string
+}) {
   const router = useRouter()
   const [createState, createAction, isCreating] = useActionState(
     createWithFallback,
@@ -88,8 +95,8 @@ export function BloodTestForm({ bloodTest }: { bloodTest?: BloodTest }) {
   })
 
   useEffect(() => {
-    if (state.status === 'success') router.push('/records')
-  }, [state.status, router])
+    if (state.status === 'success') router.push(returnHref)
+  }, [state.status, router, returnHref])
 
   function onSubmit(values: BloodTestFormOutput) {
     startTransition(() => {

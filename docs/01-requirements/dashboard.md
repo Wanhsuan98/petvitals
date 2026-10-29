@@ -17,7 +17,7 @@ Introduced: v1.0.0
 
 ## 紀錄頁趨勢圖改版（Planned）
 
-Status: Planned
+Status: Planned（時間篩選已實作：目前的兩張舊圖已經跟著篩選，下列改版尚未實作）
 決策：[ADR-009](../05-decisions/ADR-009-records-period-filter-and-charts.md)
 
 三張圖都跟著紀錄頁的時間篩選（見 [blood-test.md](./blood-test.md#時間篩選)），**橫軸改為真正的時間軸**：資料點依實際日期間距排列。原本的分類軸把每次血檢等距排開，隔 1 個月與隔 3 個月畫起來一樣寬，趨勢斜率會失真。

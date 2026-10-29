@@ -1,6 +1,7 @@
 import { listBloodTests } from '@/lib/data/blood-tests'
 import { listDailyCareLogs } from '@/lib/data/daily-care-logs'
 import { requireCatProfile } from '@/lib/require-cat-profile'
+import { toTaipeiDateString } from '@/lib/utils'
 
 import { RecordsClient } from './records-client'
 
@@ -12,6 +13,11 @@ export default async function RecordsPage() {
   ])
 
   return (
-    <RecordsClient catProfile={catProfile} dailyCareLogs={dailyCareLogs} bloodTests={bloodTests} />
+    <RecordsClient
+      catProfile={catProfile}
+      dailyCareLogs={dailyCareLogs}
+      bloodTests={bloodTests}
+      serverToday={toTaipeiDateString(new Date())}
+    />
   )
 }

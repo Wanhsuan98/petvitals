@@ -12,6 +12,7 @@ import type { ReminderSchedule } from '@/lib/schemas'
 import { getCronSecret } from '@/lib/push/env'
 import { sendToSubscription } from '@/lib/push/send'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
+import { toTaipeiDateString } from '@/lib/utils'
 
 const REMINDER_TYPE_LABEL: Record<ReminderSchedule['type'], string> = {
   FLUID: '輸液提醒',
@@ -32,10 +33,6 @@ function getTaipeiTimeOfDayFlooredToFiveMinutes(now: Date): string {
   const hh = String(taipeiNow.getHours()).padStart(2, '0')
   const mm = String(flooredMinutes).padStart(2, '0')
   return `${hh}:${mm}`
-}
-
-function getTaipeiDateString(now: Date): string {
-  return now.toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' })
 }
 
 type ReminderResult = {
@@ -61,7 +58,7 @@ export async function GET(request: NextRequest) {
 
   const now = new Date()
   const timeOfDay = getTaipeiTimeOfDayFlooredToFiveMinutes(now)
-  const today = getTaipeiDateString(now)
+  const today = toTaipeiDateString(now)
 
   const serviceRoleSupabase = createServiceRoleClient()
   const dueReminders = await listDueReminders(serviceRoleSupabase, timeOfDay)
