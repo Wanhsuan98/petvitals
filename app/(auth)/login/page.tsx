@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useActionState, useEffect } from 'react'
+import { use, useActionState, useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,11 +9,19 @@ import { Label } from '@/components/ui/label'
 import { clearOfflineCache } from '@/lib/offline-cache'
 
 import { signInWithGoogle, signInWithMagicLink, type MagicLinkState } from './actions'
+import { getLoginErrorMessage } from './login-errors'
 
 const INITIAL_STATE: MagicLinkState = { status: 'idle' }
 
-export default function LoginPage() {
+export default function LoginPage({
+  searchParams
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const [state, formAction, isPending] = useActionState(signInWithMagicLink, INITIAL_STATE)
+  const { error: errorCode } = use(searchParams)
+  // 使用者在這頁重新送出 Email 後就改顯示寄送結果，不再留著上一次的失敗訊息
+  const loginErrorMessage = state.status === 'idle' ? getLoginErrorMessage(errorCode) : undefined
 
   // 登入過期被導回這裡時，上一位使用者沒有按登出，快取也就沒被清；
   // 在登入頁再清一次，確保下一個登入的人不會讀到前一位的離線快取
@@ -29,6 +37,12 @@ export default function LoginPage() {
           輸入 Email 取得登入連結，或用 Google 帳號登入。
         </p>
       </div>
+
+      {loginErrorMessage && (
+        <p role="alert" className="text-sm text-destructive">
+          {loginErrorMessage}
+        </p>
+      )}
 
       <form action={formAction} className="space-y-3" noValidate>
         <div className="space-y-1.5">
