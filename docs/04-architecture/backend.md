@@ -6,6 +6,10 @@ Last Updated: v1.2.0
 ## Supabase 與 RLS（現行，v1.0）
 
 - 認證：Supabase Auth（Magic Link + Google OAuth），透過 `proxy.ts`（Next.js 16 把 `middleware.ts` 改名為 `proxy.ts`）在每個 request 刷新 session 並依登入狀態導向。
+  - 登入回跳：Magic Link 與 Google 都回到 `/auth/callback`，用 `?code=` 換 session（PKCE）後**一律導回首頁**，不接受 `?next=` 之類的導向參數。舊版有 `next` 並檢查「以 `/` 開頭、不以 `//` 開頭」，但 `/\evil.com` 會被瀏覽器解析成 `//evil.com`，檢查可被繞過；站內沒有任何地方需要 `next`，所以直接移除。
+  - 登入失敗時導回 `/login?error=<代碼>`（`auth_callback_failed`：callback 沒有 code 或換 session 失敗；`google_oauth_failed`：取不到 Google 登入網址），登入頁只依已知代碼顯示固定的中文說明（`app/(auth)/login/login-errors.ts`），不把網址參數內容顯示到畫面上。`auth_callback_failed` 最常見的原因是 PKCE 魔法連結在另一個瀏覽器開啟（例如 iPhone 主畫面 App 發起、信件連結在 Safari 打開），說明文字會提示使用者在同一個瀏覽器開啟連結。
+  - 回跳網址的網域取自 `NEXT_PUBLIC_SITE_URL`（只取 origin，容忍結尾斜線），正式環境必須設定，否則會退回信任 request header（`lib/site-url.ts`）。Supabase 後台的 Redirect URLs 白名單要與之一致。
+  - 安全性回應標頭（`next.config.ts`）：`X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、`Content-Security-Policy: frame-ancestors 'none'`、`Referrer-Policy: strict-origin-when-cross-origin`。完整 CSP（限制 script 來源，需搭配 nonce）尚未導入。
 - 資料表：`cat_profiles`、`daily_care_logs`、`blood_tests`。（`subscriptions` 表還在，但已經沒有任何程式碼使用，見 [ADR-002](../05-decisions/ADR-002-subscription-tier-model.md) 的「徹底移除 ECPay 訂閱機制」。）
 - RLS 模型：`cat_profiles.owner_id = auth.uid()`；`daily_care_logs`/`blood_tests` 透過 EXISTS 子查詢比對 `cat_profiles.owner_id = auth.uid()`。目前只認得單一 owner，不認得協作者。
 - **重要維運提醒**：這個專案裡透過 SQL Editor 建立的資料表，不會自動繼承預設的 GRANT 權限。每張新表都要記得補上明確的 `grant ... to <role>` 給每個會用到它的角色（`authenticated`、`service_role`），否則會出現 `permission denied for table X` 這類 runtime 才會發現的錯誤。這是本專案已經踩過的坑（例如 `cat_profiles`/`daily_care_logs`/`blood_tests` 一開始都漏了 `service_role` 的 grant）。
