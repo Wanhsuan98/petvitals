@@ -2,6 +2,7 @@
 
 Status: Planned
 Introduced: 未定
+Implementation: `supabase/migrations/20261127000000_add_ai_usage_logs.sql`、`lib/data/ai-usage.ts`（剩餘次數計算 `countRemainingAiUsage()`，測試見 `lib/data/ai-usage.test.ts`）
 決策：[ADR-010](../05-decisions/ADR-010-ai-blood-test-extraction-and-care-summary.md)
 
 ## Purpose
