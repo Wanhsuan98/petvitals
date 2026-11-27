@@ -179,23 +179,47 @@ describe('compareBloodTestsChronologically', () => {
 
 describe('evaluatePhosphorusStatus', () => {
   it('flags STAGE_1/STAGE_2 phosphorus above 4.5 mg/dL as high', () => {
-    expect(evaluatePhosphorusStatus('STAGE_1', 4.6).isHigh).toBe(true)
-    expect(evaluatePhosphorusStatus('STAGE_2', 4.6).isHigh).toBe(true)
+    expect(evaluatePhosphorusStatus('STAGE_1', 4.6).status).toBe('HIGH')
+    expect(evaluatePhosphorusStatus('STAGE_2', 4.6).status).toBe('HIGH')
   })
 
-  it('treats the threshold value itself as within target', () => {
+  it('treats the upper threshold value itself as within target', () => {
     const result = evaluatePhosphorusStatus('STAGE_1', 4.5)
-    expect(result.isHigh).toBe(false)
+    expect(result.status).toBe('IN_TARGET')
     // 等於上限時文字不能寫「< 4.5」，否則跟數值自相矛盾
-    expect(result.message).toContain('未超過')
+    expect(result.message).toContain('2.7–4.5')
     expect(result.message).not.toContain('<')
   })
 
-  it('uses the higher STAGE_3/STAGE_4 thresholds', () => {
-    expect(evaluatePhosphorusStatus('STAGE_3', 4.8).isHigh).toBe(false)
-    expect(evaluatePhosphorusStatus('STAGE_3', 5.1).isHigh).toBe(true)
-    expect(evaluatePhosphorusStatus('STAGE_4', 5.5).isHigh).toBe(false)
-    expect(evaluatePhosphorusStatus('STAGE_4', 6.1).isHigh).toBe(true)
+  it('uses the higher STAGE_3/STAGE_4 upper thresholds', () => {
+    expect(evaluatePhosphorusStatus('STAGE_3', 4.8).status).toBe('IN_TARGET')
+    expect(evaluatePhosphorusStatus('STAGE_3', 5.1).status).toBe('HIGH')
+    expect(evaluatePhosphorusStatus('STAGE_4', 5.5).status).toBe('IN_TARGET')
+    expect(evaluatePhosphorusStatus('STAGE_4', 6.1).status).toBe('HIGH')
+  })
+
+  it('flags phosphorus below the IRIS minimum of 2.7 mg/dL as low in every stage', () => {
+    // 修正前 2.0 會顯示「血磷控制良好」
+    for (const stage of ['STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4'] as const) {
+      const result = evaluatePhosphorusStatus(stage, 2.0)
+      expect(result.status).toBe('LOW')
+      expect(result.message).not.toContain('良好')
+    }
+  })
+
+  it('treats the lower threshold value itself as within target', () => {
+    expect(evaluatePhosphorusStatus('STAGE_2', 2.7).status).toBe('IN_TARGET')
+    expect(evaluatePhosphorusStatus('STAGE_2', 2.6).status).toBe('LOW')
+  })
+
+  it('does not call a legacy 0 value low', () => {
+    // 0 是 v1.2 前表單預設值留下的「沒填」，不是真的血磷 0
+    expect(evaluatePhosphorusStatus('STAGE_2', 0).status).toBe('INVALID')
+  })
+
+  it('formats the stage for people instead of showing the enum', () => {
+    expect(evaluatePhosphorusStatus('STAGE_3', 5.5).message).toContain('第 3 期')
+    expect(evaluatePhosphorusStatus('STAGE_3', 5.5).message).not.toContain('STAGE_3')
   })
 })
 

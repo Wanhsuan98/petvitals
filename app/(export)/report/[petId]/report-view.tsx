@@ -8,6 +8,8 @@ import {
   checkWeightLossAlert,
   compareBloodTestsChronologically,
   evaluatePhosphorusStatus,
+  isPhosphorusOutOfTarget,
+  PHOSPHORUS_STATUS_LABELS,
   groupDailyCareLogsByDate
 } from '@/lib/clinical'
 import type { BloodTest, CatProfile, DailyCareLog } from '@/lib/schemas'
@@ -162,13 +164,16 @@ export function ReportView({
                 <p className="text-lg font-semibold">{latestBloodTest.phosphorus} mg/dL</p>
                 <p
                   className={
-                    latestPhosphorusStatus.isHigh
+                    isPhosphorusOutOfTarget(latestPhosphorusStatus.status)
                       ? 'text-xs text-destructive'
                       : 'text-xs text-muted-foreground'
                   }
                 >
-                  {latestPhosphorusStatus.isHigh ? '高於建議上限' : '符合建議目標'}（
+                  {PHOSPHORUS_STATUS_LABELS[latestPhosphorusStatus.status]}（
                   {latestBloodTest.testDate}）
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {`腎病控制目標 ${latestPhosphorusStatus.target.min}–${latestPhosphorusStatus.target.max} mg/dL（IRIS 2026，依目前分期；非檢驗室參考區間）`}
                 </p>
               </>
             ) : (
@@ -222,7 +227,7 @@ export function ReportView({
                         <td className="py-1.5 pr-3">{test.creatinine}</td>
                         <td className="py-1.5 pr-3">{test.sdma ?? '—'}</td>
                         <td
-                          className={`py-1.5 pr-3 ${status.isHigh ? 'font-medium text-destructive' : ''}`}
+                          className={`py-1.5 pr-3 ${isPhosphorusOutOfTarget(status.status) ? 'font-medium text-destructive' : ''}`}
                         >
                           {test.phosphorus}
                         </td>

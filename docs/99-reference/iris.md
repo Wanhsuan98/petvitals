@@ -21,7 +21,7 @@ International Renal Interest Society (IRIS) 官方文件（www.iris-kidney.com�
 | Stage 4 |                6.0 | 「更實際的治療後目標」< 6.0 mg/dl（1.9 mmol/l）                                                                         |
 
 - 血磷高於上限時 IRIS 建議的下一步是加用磷結合劑（原文為 remains **above** 4.5／5／6 mg/dl），與程式「大於上限才警示」（`pValue > targetMax`）一致，因此恰好等於上限時不警示。
-- IRIS 另建議長期血磷不要低於 2.7 mg/dL（0.9 mmol/l）；目前程式只檢查上限，不檢查下限。
+- IRIS 另建議長期血磷不要低於 2.7 mg/dL（0.9 mmol/l），各期相同。程式已在 ADR-011 第 1 階段加入下限檢查（`PHOSPHORUS_TARGET_MIN_MG_DL`），低於 2.7 顯示「低於控制目標」，見 [phosphorus.md](../03-domain-logic/phosphorus.md)。
 
 ## 比對紀錄
 
@@ -56,7 +56,7 @@ PetVitals 僅將這些數值用於參考／警示呈現。應用程式不做 CKD
 當 IRIS 指引更新時：
 
 1. 更新本文件
-2. 更新 `lib/clinical.ts` 裡的 `thresholdMap` 常數
+2. 更新 `lib/clinical.ts` 裡的 `PHOSPHORUS_TARGET_MAX_MG_DL`、`PHOSPHORUS_TARGET_MIN_MG_DL` 常數
 3. 更新 `lib/clinical.test.ts` 的測試案例
 4. 更新 `CHANGELOG.md`
 5. 建立對應 release
