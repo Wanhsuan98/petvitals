@@ -15,7 +15,7 @@ import {
 import 'chartjs-adapter-date-fns'
 import { Line } from 'react-chartjs-2'
 
-import { evaluatePhosphorusStatus, type WeightFluidTrendPoint } from '@/lib/clinical'
+import { getPhosphorusTarget, type WeightFluidTrendPoint } from '@/lib/clinical'
 import type { BloodTest, CatProfile } from '@/lib/schemas'
 
 ChartJS.register(TimeScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
@@ -31,7 +31,9 @@ const COLORS = {
   creatinine: '#c98255',
   sdma: '#557a63',
   phosphorus: '#d4a84f',
-  limit: '#b4463c'
+  limit: '#b4463c',
+  // 下限用中性灰，跟上限的紅色區分：偏低同樣要留意，但不是同一條線
+  lowerLimit: '#7a7a72'
 }
 
 // 資料點超過這個數量就不畫圓點，避免擠成一團；點擊或滑過仍會顯示該日期的數值
@@ -100,23 +102,30 @@ const creatinineBandsPlugin: Plugin<'line'> = {
 }
 
 // 血磷上限虛線：畫成橫跨整個圖的水平線，只有一筆血檢時也看得到
-function phosphorusLimitPlugin(limit: number): Plugin<'line'> {
+// 腎病控制目標的上下限虛線：上限依目前分期（紅色），下限 2.7 各期相同（灰色、間隔較密，與上限區分）
+function phosphorusLimitPlugin(target: { min: number; max: number }): Plugin<'line'> {
+  const lines = [
+    { value: target.max, color: COLORS.limit, dash: [6, 4] },
+    { value: target.min, color: COLORS.lowerLimit, dash: [2, 3] }
+  ]
   return {
     id: 'phosphorusLimit',
     beforeDatasetsDraw(chart) {
       const { ctx, chartArea, scales } = chart
       const yScale = scales.y
       if (!yScale) return
-      const y = yScale.getPixelForValue(limit)
-      ctx.save()
-      ctx.strokeStyle = COLORS.limit
-      ctx.lineWidth = 1.5
-      ctx.setLineDash([6, 4])
-      ctx.beginPath()
-      ctx.moveTo(chartArea.left, y)
-      ctx.lineTo(chartArea.right, y)
-      ctx.stroke()
-      ctx.restore()
+      for (const line of lines) {
+        const y = yScale.getPixelForValue(line.value)
+        ctx.save()
+        ctx.strokeStyle = line.color
+        ctx.lineWidth = 1.5
+        ctx.setLineDash(line.dash)
+        ctx.beginPath()
+        ctx.moveTo(chartArea.left, y)
+        ctx.lineTo(chartArea.right, y)
+        ctx.stroke()
+        ctx.restore()
+      }
     }
   }
 }
@@ -248,7 +257,7 @@ export function PhosphorusChart({
   tests: BloodTest[]
   irisStage: CatProfile['irisStage']
 }) {
-  const { targetMax } = evaluatePhosphorusStatus(irisStage, 0)
+  const target = getPhosphorusTarget(irisStage)
   const maxPhosphorus = Math.max(...tests.map((test) => test.phosphorus))
 
   const data: TimeLineData = {
@@ -268,17 +277,17 @@ export function PhosphorusChart({
   return (
     <Line
       // plugins 只在建立圖表時讀取一次：分期改變（上限改變）時用 key 重建圖表，虛線才會跟著更新
-      key={targetMax}
-      aria-label={`血磷趨勢圖，虛線為目前分期建議上限 ${targetMax} mg/dL，各次數值請見下方血檢清單`}
+      key={target.max}
+      aria-label={`血磷趨勢圖，虛線為目前分期的腎病控制目標 ${target.min}–${target.max} mg/dL，各次數值請見下方血檢清單`}
       data={data}
-      plugins={[phosphorusLimitPlugin(targetMax)]}
+      plugins={[phosphorusLimitPlugin(target)]}
       options={baseOptions({
-        // 上限虛線一定要在圖內
+        // 上下限虛線一定要在圖內（min 0 已涵蓋下限）
         y: {
           type: 'linear',
           position: 'left',
           min: 0,
-          suggestedMax: Math.max(targetMax, maxPhosphorus) + 1,
+          suggestedMax: Math.max(target.max, maxPhosphorus) + 1,
           title: { display: true, text: '血磷 (mg/dL)' }
         }
       })}

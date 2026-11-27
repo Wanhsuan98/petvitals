@@ -93,8 +93,9 @@ Status: Planned
 
 血檢報告辨識與回診前照護摘要的後端設計。需求見 [../01-requirements/blood-test.md](../01-requirements/blood-test.md#ai-血檢報告辨識)、[../01-requirements/report.md](../01-requirements/report.md#ai-回診前照護摘要)，決策見 [ADR-010](../05-decisions/ADR-010-ai-blood-test-extraction-and-care-summary.md)。
 
-- **呼叫位置**：只從 Server Action 呼叫 Claude API（`@anthropic-ai/sdk`），瀏覽器不直接接觸 API。金鑰放在 `ANTHROPIC_API_KEY`，**不能加 `NEXT_PUBLIC_` 前綴**。
+- **呼叫位置**：只從 Server Action 呼叫 Claude API（`@anthropic-ai/sdk`），瀏覽器不直接接觸 API。`lib/ai/anthropic.ts`、`extract-blood-test.ts`、`blood-test-extraction-prompt.ts` 開頭引用 `server-only`，前端元件不小心引用時會在建置階段報錯；測試環境透過 `vitest.config.mts` 的 alias 指向空模組。金鑰放在 `ANTHROPIC_API_KEY`，**不能加 `NEXT_PUBLIC_` 前綴**。
 - **模型**：`claude-opus-5-5`，`effort` 在辨識用 `low`、在摘要用 `medium`；開啟 server-side fallback（`fallbacks: "default"`）。輸出用 structured output 固定格式，伺服器端再用 Zod 驗證一次。
+- **實測數據**（2026-11-27，本機 dev server，虛構的測試報告圖片）：一次辨識從送出到回應約 5.5 秒，輸入約 3,900 token、輸出約 220 token，費用約 US$0.02。民國年日期、µg/dL、報告上的其他項目（ALT）都正確處理；SI 制單位的報告全部留白並提示換算。真實報告的照片品質、版面差異較大，正式上線前要再用實際報告測試。
 - **照片大小**：照片經由 Server Action 上傳，Server Action 的 request body 預設上限是 1MB（專案目前沒有設定 `serverActions.bodySizeLimit`）。前端要壓縮到 900 KB 以下，並在轉成 JPEG 時去除 EXIF，見 [../02-data-contract/blood-test-extraction.md](../02-data-contract/blood-test-extraction.md)。
 - **請求流程**：確認登入 → `claim_ai_usage()` 占名額（內部檢查權限、每天上限與總嘗試上限）→ 呼叫 API → `finish_ai_usage()` 記錄狀態與 token 數 → 回傳結果。資料表與函式見 [../02-data-contract/ai-usage-log.md](../02-data-contract/ai-usage-log.md)。
 - **不保存內容**：照片、prompt、AI 輸出都不寫入資料庫、Storage 或 log。錯誤 log 只記錄錯誤代碼，不記錄請求內容（照片 base64 和照護數據都可能出現在錯誤物件裡，log 前要剝除）。

@@ -13,6 +13,9 @@ import {
   checkWeightLossAlert,
   compareBloodTestsChronologically,
   evaluatePhosphorusStatus,
+  getPhosphorusTarget,
+  isPhosphorusOutOfTarget,
+  PHOSPHORUS_STATUS_LABELS,
   evaluateStageHint,
   groupDailyCareLogsByDate,
   groupDailyPointsByWeek
@@ -270,7 +273,11 @@ export function RecordsClient({
             <>
               <PhosphorusChart tests={periodBloodTests} irisStage={catProfile.irisStage} />
               <p className="text-xs text-muted-foreground">
-                {`紅色虛線：目前設定的${formatStageNumber(catProfile.irisStage)}血磷建議上限 ${evaluatePhosphorusStatus(catProfile.irisStage, 0).targetMax} mg/dL。較早的檢驗若在不同分期時做的，虛線不代表當時的目標。`}
+                {`紅色虛線：目前設定的${formatStageNumber(catProfile.irisStage)}腎病控制目標上限 ${getPhosphorusTarget(catProfile.irisStage).max} mg/dL；灰色虛線：IRIS 建議的下限 ${getPhosphorusTarget(catProfile.irisStage).min} mg/dL。較早的檢驗若在不同分期時做的，紅色虛線不代表當時的目標。`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                腎病控制目標依 IRIS 2026
+                治療建議與目前設定的分期，和血檢報告上的「檢驗室參考區間」不同：參考區間是一般健康貓的範圍，控制目標是腎貓的治療目標。
               </p>
             </>
           ) : sortedBloodTests.length > 0 ? (
@@ -328,8 +335,16 @@ export function RecordsClient({
                       {typeof test.sdma === 'number' ? `・SDMA ${test.sdma}` : ''}
                       {typeof test.hct === 'number' ? `・HCT ${test.hct}` : ''}
                     </p>
-                    <Badge variant={phosphorusStatus.isHigh ? 'destructive' : 'secondary'}>
-                      {phosphorusStatus.isHigh ? '血磷偏高' : '血磷正常'}
+                    <Badge
+                      variant={
+                        isPhosphorusOutOfTarget(phosphorusStatus.status)
+                          ? 'destructive'
+                          : phosphorusStatus.status === 'INVALID'
+                            ? 'outline'
+                            : 'secondary'
+                      }
+                    >
+                      {`血磷${PHOSPHORUS_STATUS_LABELS[phosphorusStatus.status]}`}
                     </Badge>
                     <p className="text-xs text-muted-foreground">{phosphorusStatus.message}</p>
                     {test.id && (

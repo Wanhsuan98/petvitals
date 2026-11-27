@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 // 驗證 YYYY-MM-DD 字串是否為實際存在的日期（regex 僅檢查格式，無法擋掉如 2026-02-30 的無效日期）
-function isValidCalendarDate(dateStr: string): boolean {
+export function isValidCalendarDate(dateStr: string): boolean {
   const [year, month, day] = dateStr.split('-').map(Number)
   const date = new Date(year, month - 1, day)
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
@@ -152,6 +152,29 @@ export const PushSubscriptionSchema = z.object({
   auth: z.string().min(1),
   createdAt: z.string().datetime().optional()
 })
+
+// ==========================================
+// 7. AI 功能使用紀錄（見 docs/02-data-contract/ai-usage-log.md、ADR-010）
+// 上限數字在 migration 20261127000000_add_ai_usage_logs.sql 的 claim_ai_usage 也有一份，
+// Postgres 無法引用 TypeScript 常數，調整時兩邊要一起改
+// ==========================================
+export const AI_FEATURES = ['BLOOD_TEST_EXTRACTION', 'CARE_SUMMARY'] as const
+export type AiFeature = (typeof AI_FEATURES)[number]
+
+export const AI_USAGE_STATUSES = ['PENDING', 'SUCCEEDED', 'REFUSED', 'INVALID', 'FAILED'] as const
+export type AiUsageStatus = (typeof AI_USAGE_STATUSES)[number]
+
+// 每天上限：API 有處理（就會收費）的狀態都計入，只有 FAILED 不計
+export const AI_DAILY_LIMITS: Record<AiFeature, number> = {
+  BLOOD_TEST_EXTRACTION: 10,
+  CARE_SUMMARY: 5
+}
+
+// 總嘗試上限：所有狀態都計入（含 FAILED），是費用的硬上限，訂為每天上限的 3 倍
+export const AI_ATTEMPT_LIMITS: Record<AiFeature, number> = {
+  BLOOD_TEST_EXTRACTION: 30,
+  CARE_SUMMARY: 15
+}
 
 export type CatProfile = z.infer<typeof CatProfileSchema>
 export type DailyCareLog = z.infer<typeof DailyCareLogSchema>

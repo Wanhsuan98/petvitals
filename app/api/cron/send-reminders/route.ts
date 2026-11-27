@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { deleteAiUsageLogsBefore } from '@/lib/data/ai-usage'
 import { listCaregiversForPet } from '@/lib/data/pet-caregivers'
 import {
   claimReminderDelivery,
@@ -23,6 +24,8 @@ const REMINDER_TYPE_LABEL: Record<ReminderSchedule['type'], string> = {
 // 每天清一次 30 天前的投遞紀錄；這個時段 cron 會觸發約 5 次，重複刪除無害
 const DELIVERY_CLEANUP_TIME = '03:00'
 const DELIVERY_RETENTION_DAYS = 30
+// AI 使用紀錄只用於計次與費用追蹤，保留 90 天（docs/02-data-contract/ai-usage-log.md），沿用同一個清除時段
+const AI_USAGE_RETENTION_DAYS = 90
 
 // 排程時間只能設 5 分鐘的整數倍，cron-job.org 每 1 分鐘觸發一次，
 // 所以把現在時間無條件捨去到最近的 5 分鐘區間：同一個區間內會被觸發約 5 次，
@@ -126,6 +129,13 @@ export async function GET(request: NextRequest) {
   if (timeOfDay === DELIVERY_CLEANUP_TIME) {
     const cutoff = new Date(now.getTime() - DELIVERY_RETENTION_DAYS * 24 * 60 * 60_000)
     await deleteDeliveriesBefore(serviceRoleSupabase, cutoff.toISOString())
+    // 清除 AI 紀錄失敗不能影響推播：記錄錯誤就好，隔天的清除時段會再試一次
+    try {
+      const aiCutoff = new Date(now.getTime() - AI_USAGE_RETENTION_DAYS * 24 * 60 * 60_000)
+      await deleteAiUsageLogsBefore(serviceRoleSupabase, aiCutoff.toISOString())
+    } catch (error) {
+      console.error('[cron] 清除 AI 使用紀錄失敗', error instanceof Error ? error.message : error)
+    }
   }
 
   return NextResponse.json({

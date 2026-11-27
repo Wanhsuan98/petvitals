@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Info, Save } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { startTransition, useActionState, useEffect } from 'react'
+import { startTransition, useActionState, useEffect, useState } from 'react'
 import { useForm, type DefaultValues } from 'react-hook-form'
 import { z } from 'zod'
 
@@ -13,10 +13,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import type { BloodTestPrefill } from '@/lib/ai/blood-test-extraction'
 import { withNetworkErrorFallback } from '@/lib/network-error'
 import { BloodTestSchema, type BloodTest } from '@/lib/schemas'
 import { toLocalDateString } from '@/lib/utils'
 
+import { BloodTestAiPanel } from './blood-test-ai-panel'
+import { planPrefill, type PrefillField } from './blood-test-prefill-plan'
 import { createBloodTestAction, type CreateBloodTestState } from './new/actions'
 import { updateBloodTestAction, type UpdateBloodTestState } from './actions'
 
@@ -63,13 +66,16 @@ function toDefaultValues(bloodTest: BloodTest | undefined): DefaultValues<BloodT
 }
 
 // 新增與編輯共用同一份表單：傳入 bloodTest 就是編輯該筆紀錄。
-// returnHref 是儲存成功後回到的紀錄頁網址（編輯時帶著原本的時間篩選）
+// returnHref 是儲存成功後回到的紀錄頁網址（編輯時帶著原本的時間篩選）。
+// aiExtraction 有傳入時顯示「拍照辨識報告」，只在新增時提供（ADR-010）
 export function BloodTestForm({
   bloodTest,
-  returnHref = '/records'
+  returnHref = '/records',
+  aiExtraction
 }: {
   bloodTest?: BloodTest
   returnHref?: string
+  aiExtraction?: { initialRemaining: number | undefined }
 }) {
   const router = useRouter()
   const [createState, createAction, isCreating] = useActionState(
@@ -88,11 +94,47 @@ export function BloodTestForm({
   const {
     register,
     handleSubmit,
+    setValue,
+    getValues,
     formState: { errors, isSubmitting }
   } = useForm<BloodTestFormInput, unknown, BloodTestFormOutput>({
     resolver: zodResolver(bloodTestFormSchema),
     defaultValues: toDefaultValues(bloodTest)
   })
+
+  // 每個欄位下方的 AI 辨識說明。使用者手動修改該欄後就移除，避免把人工輸入誤標成 AI 辨識
+  const [aiNotes, setAiNotes] = useState<Partial<Record<PrefillField, string>>>({})
+  // 檢驗日期預設是今天、不是空白，所以另外記錄「使用者或前一頁辨識是否已經設定過」
+  const [isTestDateSet, setIsTestDateSet] = useState(false)
+  // 表單一開始的檢驗日期。AI 辨識要等幾秒，結果回來時呼叫的 applyPrefill 可能來自較早的 render，
+  // isTestDateSet 會是舊值；所以同時比對表單的即時值，只要日期已經不是預設值，就視為使用者改過
+  const [initialTestDate] = useState(() => getValues('testDate'))
+
+  // 只有使用者輸入會觸發 register 的 onChange，setValue（AI 預填）不會，所以可以用來區分兩者
+  function handleUserEdit(field: PrefillField) {
+    if (field === 'testDate') setIsTestDateSet(true)
+    setAiNotes((notes) => {
+      if (!(field in notes)) return notes
+      const next = { ...notes }
+      delete next[field]
+      return next
+    })
+  }
+
+  function applyPrefill(prefill: BloodTestPrefill): number {
+    const current = getValues()
+    const plan = planPrefill(prefill, {
+      ...current,
+      isTestDateDirty: isTestDateSet || current.testDate !== initialTestDate
+    })
+    const options = { shouldDirty: true, shouldValidate: true }
+    for (const [field, value] of Object.entries(plan.values)) {
+      setValue(field as PrefillField, value, options)
+    }
+    if (plan.values.testDate !== undefined) setIsTestDateSet(true)
+    setAiNotes((notes) => ({ ...notes, ...plan.notes }))
+    return Object.keys(plan.values).length
+  }
 
   useEffect(() => {
     if (state.status === 'success') router.push(returnHref)
@@ -116,6 +158,12 @@ export function BloodTestForm({
           </p>
         </div>
       </div>
+      {aiExtraction && !isEditing && (
+        <BloodTestAiPanel
+          initialRemaining={aiExtraction.initialRemaining}
+          onPrefill={applyPrefill}
+        />
+      )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <OfflineNotice />
         <div className="space-y-1.5">
@@ -124,9 +172,18 @@ export function BloodTestForm({
             id="testDate"
             type="date"
             aria-invalid={!!errors.testDate}
-            aria-describedby={errors.testDate ? 'testDate-error' : undefined}
-            {...register('testDate')}
+            aria-describedby={
+              [aiNotes.testDate ? 'testDate-hint' : null, errors.testDate ? 'testDate-error' : null]
+                .filter(Boolean)
+                .join(' ') || undefined
+            }
+            {...register('testDate', { onChange: () => handleUserEdit('testDate') })}
           />
+          {aiNotes.testDate && (
+            <p id="testDate-hint" className="text-xs text-muted-foreground">
+              {aiNotes.testDate}
+            </p>
+          )}
           {errors.testDate && (
             <p id="testDate-error" className="text-xs text-destructive">
               {errors.testDate.message}
@@ -139,8 +196,14 @@ export function BloodTestForm({
           <Input
             id="hospitalName"
             placeholder="例如：安家貓專科動物醫院"
-            {...register('hospitalName')}
+            aria-describedby={aiNotes.hospitalName ? 'hospitalName-hint' : undefined}
+            {...register('hospitalName', { onChange: () => handleUserEdit('hospitalName') })}
           />
+          {aiNotes.hospitalName && (
+            <p id="hospitalName-hint" className="text-xs text-muted-foreground">
+              {aiNotes.hospitalName}
+            </p>
+          )}
         </div>
 
         {/* placeholder 只示範輸入格式，不放參考範圍：各醫院的參考範圍不同，
@@ -152,8 +215,9 @@ export function BloodTestForm({
             unit="mg/dL"
             placeholder="例：32.5"
             register={register}
-            registerOptions={{ valueAsNumber: true }}
+            registerOptions={{ valueAsNumber: true, onChange: () => handleUserEdit('bun') }}
             error={errors.bun}
+            hint={aiNotes.bun}
           />
 
           <NumberField
@@ -163,8 +227,9 @@ export function BloodTestForm({
             unit="mg/dL"
             placeholder="例：2.1"
             register={register}
-            registerOptions={{ valueAsNumber: true }}
+            registerOptions={{ valueAsNumber: true, onChange: () => handleUserEdit('creatinine') }}
             error={errors.creatinine}
+            hint={aiNotes.creatinine}
           />
         </div>
 
@@ -176,9 +241,11 @@ export function BloodTestForm({
             placeholder="例：18"
             register={register}
             registerOptions={{
-              setValueAs: (value) => (value === '' ? undefined : Number(value))
+              setValueAs: (value) => (value === '' ? undefined : Number(value)),
+              onChange: () => handleUserEdit('sdma')
             }}
             error={errors.sdma}
+            hint={aiNotes.sdma}
           />
 
           <NumberField
@@ -188,8 +255,9 @@ export function BloodTestForm({
             unit="mg/dL"
             placeholder="例：4.6"
             register={register}
-            registerOptions={{ valueAsNumber: true }}
+            registerOptions={{ valueAsNumber: true, onChange: () => handleUserEdit('phosphorus') }}
             error={errors.phosphorus}
+            hint={aiNotes.phosphorus}
           />
         </div>
 
@@ -200,9 +268,11 @@ export function BloodTestForm({
           placeholder="例：35"
           register={register}
           registerOptions={{
-            setValueAs: (value) => (value === '' ? undefined : Number(value))
+            setValueAs: (value) => (value === '' ? undefined : Number(value)),
+            onChange: () => handleUserEdit('hct')
           }}
           error={errors.hct}
+          hint={aiNotes.hct}
         />
 
         <div className="space-y-1.5">

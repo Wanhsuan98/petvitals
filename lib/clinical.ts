@@ -41,34 +41,88 @@ export function checkWeightLossAlert(
   }
 }
 
-// 2. IRIS 各期血磷控制標準比對（irisStage 為使用者依獸醫診斷手動設定值，非系統診斷判定）
-// 血磷控制上限整理自 IRIS (International Renal Interest Society) 分期照護建議，僅供參考，
-// 實際數值可能隨指引版本更新而調整，正式引用前請與獸醫師核對當前版本的臨床指引。
+// 2. IRIS 各期血磷「腎病控制目標」比對（irisStage 為使用者依獸醫診斷手動設定值，非系統診斷判定）
+// 數值整理自 IRIS 2026 Treatment Recommendation for CKD In Cats，見 docs/99-reference/iris.md。
+// 這是腎病的治療控制目標，不是檢驗室的參考區間（例如報告上的 3.1–7.5），兩者用途不同，畫面上要分開呈現。
+// 上限：高於上限時 IRIS 建議考慮加用磷結合劑（原文為 above），所以等於上限不算偏高。
+// 下限：IRIS 建議長期血磷不要低於 2.7 mg/dL，各期相同；等於 2.7 不算偏低
+export const PHOSPHORUS_TARGET_MIN_MG_DL = 2.7
+
+const PHOSPHORUS_TARGET_MAX_MG_DL: Record<CatProfile['irisStage'], number> = {
+  STAGE_1: 4.5,
+  STAGE_2: 4.5,
+  STAGE_3: 5.0,
+  STAGE_4: 6.0
+}
+
+export type PhosphorusTarget = { min: number; max: number }
+
+export function getPhosphorusTarget(stage: CatProfile['irisStage']): PhosphorusTarget {
+  return { min: PHOSPHORUS_TARGET_MIN_MG_DL, max: PHOSPHORUS_TARGET_MAX_MG_DL[stage] }
+}
+
+// INVALID：數值不大於 0。v1.2 前表單預設 0，舊資料可能還有 0（StoredBloodTestSchema 仍接受讀取），
+// 0 代表沒填，不能判成「偏低」，要請使用者編輯修正
+export type PhosphorusStatus = 'LOW' | 'IN_TARGET' | 'HIGH' | 'INVALID'
+
+export const PHOSPHORUS_STATUS_LABELS: Record<PhosphorusStatus, string> = {
+  LOW: '低於控制目標',
+  IN_TARGET: '在控制目標內',
+  HIGH: '高於控制目標',
+  INVALID: '數值無效'
+}
+
+const PHOSPHORUS_SOURCE_NOTE = '（依 IRIS 2026 治療建議整理，僅供參考）'
+
+function formatIrisStage(stage: CatProfile['irisStage']): string {
+  return `第 ${stage.replace('STAGE_', '')} 期`
+}
+
 export function evaluatePhosphorusStatus(
   stage: CatProfile['irisStage'],
   pValue: number
 ): {
-  isHigh: boolean
-  targetMax: number
+  status: PhosphorusStatus
+  target: PhosphorusTarget
   message: string
 } {
-  const thresholdMap: Record<CatProfile['irisStage'], number> = {
-    STAGE_1: 4.5,
-    STAGE_2: 4.5,
-    STAGE_3: 5.0,
-    STAGE_4: 6.0
+  const target = getPhosphorusTarget(stage)
+  const stageLabel = formatIrisStage(stage)
+
+  if (!Number.isFinite(pValue) || pValue <= 0) {
+    return {
+      status: 'INVALID',
+      target,
+      message: `這筆血磷數值（${pValue}）無效，請編輯這筆紀錄，改成報告上的數值。`
+    }
   }
 
-  const targetMax = thresholdMap[stage]
-  const isHigh = pValue > targetMax
+  if (pValue > target.max) {
+    return {
+      status: 'HIGH',
+      target,
+      message: `血磷 ${pValue} mg/dL 高於 IRIS ${stageLabel}的腎病控制目標上限 ${target.max} mg/dL，請和獸醫師討論是否需要調整降磷方式。${PHOSPHORUS_SOURCE_NOTE}`
+    }
+  }
+
+  if (pValue < target.min) {
+    return {
+      status: 'LOW',
+      target,
+      message: `血磷 ${pValue} mg/dL 低於 IRIS 建議的下限 ${target.min} mg/dL。血磷過低也需要留意，請和獸醫師討論目前的降磷方式是否合適。${PHOSPHORUS_SOURCE_NOTE}`
+    }
+  }
 
   return {
-    isHigh,
-    targetMax,
-    message: isHigh
-      ? `當前血磷 (${pValue} mg/dL) 已高於 IRIS ${stage} 期建議上限 (${targetMax} mg/dL)，請諮詢獸醫師是否調整降磷策略。（本標準依 IRIS 分期照護建議整理，僅供參考）`
-      : `血磷控制良好，未超過 IRIS ${stage} 期建議上限 ${targetMax} mg/dL。（本標準依 IRIS 分期照護建議整理，僅供參考）`
+    status: 'IN_TARGET',
+    target,
+    message: `血磷 ${pValue} mg/dL 在 IRIS ${stageLabel}的腎病控制目標（${target.min}–${target.max} mg/dL）內。${PHOSPHORUS_SOURCE_NOTE}`
   }
+}
+
+// 偏高與偏低都需要和獸醫師討論，畫面上用同一種醒目樣式
+export function isPhosphorusOutOfTarget(status: PhosphorusStatus): boolean {
+  return status === 'HIGH' || status === 'LOW'
 }
 
 // 2b. 血檢數值是否落在比目前設定更高的 IRIS 分期區間（僅提示，絕不自動修改分期）

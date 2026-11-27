@@ -43,7 +43,12 @@ type CareSummaryInput = {
     hct: number | null
   }[] // 期間內全部，依日期升冪
   ruleResults: {
-    phosphorus: { isHigh: boolean; latestValue: number; targetMax: number } | null
+    phosphorus: {
+      status: 'LOW' | 'IN_TARGET' | 'HIGH' | 'INVALID'
+      latestValue: number
+      targetMin: number
+      targetMax: number
+    } | null
     stageHint: { suggestedStage: string } | null // 沒有提示時為 null
     weightAlert: { isAlert: boolean; dropRate: number }
   }
@@ -79,7 +84,7 @@ type CareSummaryOutput = {
 AI 的輸出要通過以下檢查才會顯示；任何一項不通過，整份摘要都不顯示，記為 `INVALID` 並提示「請稍後再試」。API 已經處理並收費，所以**計入使用次數**（見 [ai-usage-log.md](./ai-usage-log.md)）：
 
 1. 符合 `CareSummaryOutputSchema`（格式、項目數、字數上限）。
-2. `systemAlerts` 的每個 `source`，都必須在 `ruleResults` 中確實觸發：`phosphorus.isHigh`、`stageHint` 不為 null、`weightAlert.isAlert`。AI 不能自己新增系統提示。
+2. `systemAlerts` 的每個 `source`，都必須在 `ruleResults` 中確實觸發：`phosphorus.status` 為 `HIGH` 或 `LOW`、`stageHint` 不為 null、`weightAlert.isAlert`。AI 不能自己新增系統提示。
 3. **禁用寫法檢查**：比對的是「寫法」，不是單一詞彙。例如「輸液劑量是否需要調整？」「醫囑處方輸液量」是正常的問句或資料描述，不能被擋。初版規則如下，以正規表達式實作，放在程式常數裡，之後依測試結果增修：
 
    | 類別 | 擋下的寫法（示意）                                                                                          | 不擋的例子                                        |

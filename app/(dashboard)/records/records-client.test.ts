@@ -102,7 +102,7 @@ describe('records period filter', () => {
   it('gives every chart an accessible name', () => {
     const html = render(recentTests)
     expect(html).toContain('aria-label="肌酸酐趨勢圖')
-    expect(html).toContain('aria-label="血磷趨勢圖，虛線為目前分期建議上限 4.5 mg/dL')
+    expect(html).toContain('aria-label="血磷趨勢圖，虛線為目前分期的腎病控制目標 2.7–4.5 mg/dL')
   })
 
   it('keeps the stage hint on the newest test even when it is outside the period', () => {

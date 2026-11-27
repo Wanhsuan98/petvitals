@@ -2,6 +2,8 @@
 
 Status: Planned
 Introduced: 未定
+Implementation: `lib/ai/blood-test-extraction.ts`（Zod schema、`toBloodTestPrefill()`，前後端共用）、`lib/ai/blood-test-extraction-prompt.ts`（system prompt 與 JSON schema，`server-only`，不打包進瀏覽器）、`lib/ai/extract-blood-test.ts`（呼叫 API）、`lib/image-compress.ts`（前端壓縮）、`app/(dashboard)/records/new/extract-actions.ts`（Server Action）
+Tests: `lib/ai/blood-test-extraction.test.ts`、`lib/ai/image-limits.test.ts`、`app/(dashboard)/records/blood-test-prefill-plan.test.ts`
 決策：[ADR-010](../05-decisions/ADR-010-ai-blood-test-extraction-and-care-summary.md)
 
 ## Purpose
@@ -41,7 +43,9 @@ type BloodTestExtraction = {
 }
 ```
 
-Prompt 要求：看不清楚、找不到的項目一律回 `null`，不推測；同一項目出現多次（例如前後兩次檢驗並列）時取最新日期那一欄；不做單位換算。
+**模型實際輸出的格式（wire format）與上面的型別不同**：structured output 限制「可為 null 或聯集型別的參數」最多 16 個，超過時 API 直接回 400（2026-11-27 實測，原本的設計有 17 個）。所以只有 `value` 用 `null` 表示「沒有」，`unit`、`sourceLabel`、`testDate`、`hospitalName` 改用空字串，Zod 驗證時再轉回 `null`，上面的型別是轉換後的結果。單元測試會檢查 JSON schema 的聯集參數不超過 16 個。
+
+Prompt 要求：看不清楚、找不到的項目，數值回 `null`、文字回空字串，不推測；同一項目出現多次（例如前後兩次檢驗並列）時取最新日期那一欄；不做單位換算。
 
 ## 轉成表單預填值
 
