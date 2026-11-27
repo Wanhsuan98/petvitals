@@ -18,6 +18,10 @@ Last Updated: v1.2.0
 
 決策脈絡見 [ADR-001](../05-decisions/ADR-001-single-cat-mvp.md)。目前不需要動 migration，只需要保留這個路徑不被架構卡死。
 
+## AI 血檢報告辨識與回診前照護摘要（規劃中，版本未定）
+
+兩個功能：拍照辨識血檢報告來預填表單、把近 6 個月的照護數據整理成回診前摘要。AI 只做資訊整理，不做判斷，臨床提示仍由現有規則計算。觸發點之一是「2026 法國皇家 AI for Pets 創新徵件計畫」（繳件截止 2027/01/06）。決策與限制見 [ADR-010](../05-decisions/ADR-010-ai-blood-test-extraction-and-care-summary.md)；需求見 [blood-test.md](../01-requirements/blood-test.md#ai-血檢報告辨識)、[report.md](../01-requirements/report.md#ai-回診前照護摘要)，資料契約見 [ai-usage-log.md](../02-data-contract/ai-usage-log.md)、[blood-test-extraction.md](../02-data-contract/blood-test-extraction.md)、[care-summary.md](../02-data-contract/care-summary.md)。
+
 ## LINE 整合（未排入時程）
 
 LINE Notify 已於 2025/3/31 停止服務。未來如需 LINE 通知，須改走 LINE Messaging API 官方帳號，需另行申請與審核。對台灣使用者可能有價值，但目前沒有排入任何版本，需要先評估申請流程與維運成本。
