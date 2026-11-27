@@ -86,3 +86,17 @@ exists (
 ## 通知中心第一版（v1.2）
 
 通知中心不新增資料表或變更 RLS。本人 session 查詢既有 `pet_caregivers` 的 PENDING 邀請，沿用接受邀請 action；推播憑證沿用 `push_subscriptions` 及現有 subscribe/unsubscribe API。第一版沒有提醒歷史與已讀資料，見 [ADR-004](../05-decisions/ADR-004-notification-center-mvp.md)。
+
+## AI 功能（規劃中，見 ADR-010）
+
+Status: Planned
+
+血檢報告辨識與回診前照護摘要的後端設計。需求見 [../01-requirements/blood-test.md](../01-requirements/blood-test.md#ai-血檢報告辨識)、[../01-requirements/report.md](../01-requirements/report.md#ai-回診前照護摘要)，決策見 [ADR-010](../05-decisions/ADR-010-ai-blood-test-extraction-and-care-summary.md)。
+
+- **呼叫位置**：只從 Server Action 呼叫 Claude API（`@anthropic-ai/sdk`），瀏覽器不直接接觸 API。金鑰放在 `ANTHROPIC_API_KEY`，**不能加 `NEXT_PUBLIC_` 前綴**。
+- **模型**：`claude-opus-5-5`，`effort` 在辨識用 `low`、在摘要用 `medium`；開啟 server-side fallback（`fallbacks: "default"`）。輸出用 structured output 固定格式，伺服器端再用 Zod 驗證一次。
+- **照片大小**：照片經由 Server Action 上傳，Server Action 的 request body 預設上限是 1MB（專案目前沒有設定 `serverActions.bodySizeLimit`）。前端要壓縮到 900 KB 以下，並在轉成 JPEG 時去除 EXIF，見 [../02-data-contract/blood-test-extraction.md](../02-data-contract/blood-test-extraction.md)。
+- **請求流程**：確認登入 → `claim_ai_usage()` 占名額（內部檢查權限、每天上限與總嘗試上限）→ 呼叫 API → `finish_ai_usage()` 記錄狀態與 token 數 → 回傳結果。資料表與函式見 [../02-data-contract/ai-usage-log.md](../02-data-contract/ai-usage-log.md)。
+- **不保存內容**：照片、prompt、AI 輸出都不寫入資料庫、Storage 或 log。錯誤 log 只記錄錯誤代碼，不記錄請求內容（照片 base64 和照護數據都可能出現在錯誤物件裡，log 前要剝除）。
+- **Anthropic 端的資料處理**（2026-11-27 查證官方頁面，細節與來源見 ADR-010 第 5 節）：一般 API 的輸入輸出在 30 天內刪除（被標記違規者最長保存 2 年）；商業 API 預設不用於訓練；`claude-opus-5-5` 不是 Covered Model；`inference_geo` 只有 `global` 與 `us` 兩種，資料一定會在台灣境外處理。
+- **新增資料表** `ai_usage_logs`：沿用本文件開頭的維運提醒，記得補 `authenticated`、`service_role` 的 GRANT。`claim_ai_usage` 用 `pg_advisory_xact_lock` 序列化併發請求，做法與 `enforce_caregiver_cap` 相同。
